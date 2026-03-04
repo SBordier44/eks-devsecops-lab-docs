@@ -24,8 +24,8 @@ The platform is composed of:
 
 ## Related repositories
 
-Infrastructure: [eks-devsecops-lab-infra](https://github.com/eks-devsecops-lab-infra)
+Infrastructure: [eks-devsecops-lab-infra](https://github.com/SBordier44/eks-devsecops-lab-infra)
 
-Application code: [eks-devsecops-lab-app](https://github.com/eks-devsecops-lab-app)
+Application code: [eks-devsecops-lab-app](https://github.com/SBordier44/eks-devsecops-lab-app)
 
-GitOps: [eks-devsecops-lab-gitops](https://github.com/eks-devsecops-lab-gitops)
+GitOps: [eks-devsecops-lab-gitops](https://github.com/SBordier44/eks-devsecops-lab-gitops)
