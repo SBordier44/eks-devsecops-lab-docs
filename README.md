@@ -110,7 +110,8 @@ Operational and troubleshooting guides:
 Architecture Decision Records documenting major choices and trade-offs.
 
 ### Diagrams
-Draw.io source files and exported visuals for the main architecture and platform flows.
+Architecture visuals may be added progressively when they provide clear value.
+When useful, lightweight Markdown-friendly formats such as Mermaid will be preferred.
 
 ## Design Principles
 
