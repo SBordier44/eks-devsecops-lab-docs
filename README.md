@@ -1,6 +1,7 @@
 # EKS DevSecOps Lab Documentation
 
-This repository contains the architecture documentation, diagrams, ADRs, and operational guides for the **EKS DevSecOps Lab**.
+This repository contains the architecture documentation, ADRs, and operational guides for the **EKS DevSecOps Lab**.
+Architecture visuals may be added progressively when they provide clear value.
 
 The goal of this lab is to design, build, and operate a **production-like Kubernetes platform on AWS** while applying practical **DevSecOps**, **GitOps**, and **platform engineering** practices.
 
