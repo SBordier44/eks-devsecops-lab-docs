@@ -5,7 +5,6 @@
 This document tracks the evolution of the EKS DevSecOps Lab from its current validated baseline to its target platform direction.
 
 Its goal is to distinguish clearly between:
-
 - what is already implemented and validated
 - what is planned next
 - what belongs to the broader target architecture vision
@@ -14,12 +13,9 @@ This distinction keeps the documentation transparent, professional, and useful f
 
 ## Delivery Model
 
-The lab evolves progressively.
-
-New capabilities are introduced one at a time, validated, and documented before moving to the next platform concern.
+The lab evolves progressively. New capabilities are introduced one at a time, validated, and documented before moving to the next platform concern.
 
 This approach is intentional:
-
 - it keeps the platform understandable
 - it reduces unnecessary complexity
 - it preserves stability of the current baseline
@@ -37,6 +33,7 @@ This approach is intentional:
 The lab currently includes the following validated capabilities.
 
 ### Infrastructure Foundation
+
 Status: **Implemented**
 
 - AWS infrastructure provisioned with Terraform and Terragrunt
@@ -47,6 +44,7 @@ Status: **Implemented**
 - GitHub OIDC federation to AWS
 
 ### Application Delivery
+
 Status: **Implemented**
 
 - demo application source repository
@@ -55,6 +53,7 @@ Status: **Implemented**
 - GitOps image update flow
 
 ### GitOps Platform
+
 Status: **Implemented**
 
 - ArgoCD bootstrap
@@ -62,6 +61,7 @@ Status: **Implemented**
 - demo application deployment through GitOps
 
 ### Ingress and TLS
+
 Status: **Implemented**
 
 - Traefik ingress controller
@@ -70,6 +70,7 @@ Status: **Implemented**
 - HTTPS exposure for the demo application
 
 ### Secrets Management
+
 Status: **Implemented**
 
 - External Secrets Operator
@@ -77,7 +78,17 @@ Status: **Implemented**
 - AWS Secrets Manager integration
 - ExternalSecret to Kubernetes Secret synchronization
 
-## Current Documentation Baseline
+### Platform Governance with Kyverno
+
+Status: **Implemented**
+
+- Kyverno deployment through GitOps and ArgoCD
+- dedicated ArgoCD application for Kyverno
+- dedicated ArgoCD application for Kyverno policies
+- first non-blocking `Audit` policies
+- initial policy scope limited to `demo-app-dev`
+
+### Current Documentation Baseline
 
 Status: **In progress**
 
@@ -87,22 +98,23 @@ The next objective is to progressively document the entire lab architecture in a
 
 ## Planned Next Capabilities
 
-### Platform Governance with Kyverno
+### Broader Kyverno Governance
+
 Status: **Planned**
 
-Goal:
-Introduce policy validation and governance progressively without destabilizing the current platform baseline.
+Goal: Extend policy coverage progressively without destabilizing the current platform baseline.
 
 Expected scope:
-- Kyverno deployment through GitOps
-- first non-blocking audit policies
+- broader namespace and workload coverage
+- additional audit-first policies
 - later progressive enforcement of selected controls
+- clearer policy layering between platform and workloads
 
 ### Secure Container Supply Chain
+
 Status: **Planned**
 
-Goal:
-Strengthen the security posture of the application delivery pipeline and deployment chain.
+Goal: Strengthen the security posture of the application delivery pipeline and deployment chain.
 
 Expected themes:
 - stronger build security controls
@@ -111,10 +123,10 @@ Expected themes:
 - policy-aware deployment controls
 
 ### Broader Platform Security Controls
+
 Status: **Planned**
 
-Goal:
-Increase platform maturity with additional guardrails and clearer security boundaries.
+Goal: Increase platform maturity with additional guardrails and clearer security boundaries.
 
 Expected themes:
 - stronger workload governance
@@ -123,10 +135,10 @@ Expected themes:
 - more explicit platform hardening decisions
 
 ### Observability and Operations
+
 Status: **Planned**
 
-Goal:
-Improve platform operability and troubleshooting depth.
+Goal: Improve platform operability and troubleshooting depth.
 
 Expected themes:
 - richer runbooks
@@ -139,7 +151,6 @@ Expected themes:
 Status: **Candidate**
 
 These topics may become relevant later depending on the evolution of the lab:
-
 - advanced policy sets
 - stronger multi-environment design
 - broader compliance-oriented controls
@@ -151,14 +162,19 @@ These topics may become relevant later depending on the evolution of the lab:
 The lab already demonstrates a strong end-to-end baseline, but several gaps remain between the current validated platform and the target platform direction.
 
 ### Current Strengths
+
 - real AWS infrastructure as code
 - real GitOps workflow
 - real HTTPS exposure with automated certificates
 - real AWS-to-Kubernetes secret synchronization
+- real GitOps-managed policy engine deployment
+- initial non-blocking governance controls already validated
 - clear repository separation by responsibility
 
 ### Main Gaps
-- Kyverno is not yet introduced
+
+- Kyverno scope is still intentionally narrow
+- only initial `Audit` policies are currently implemented
 - secure container supply chain is not yet documented as implemented
 - governance and policy layers are still limited
 - runbooks are not yet complete
@@ -167,17 +183,16 @@ The lab already demonstrates a strong end-to-end baseline, but several gaps rema
 ## Near-Term Next Steps
 
 The next logical documentation and platform steps are:
-
 1. complete the architecture documentation baseline
-2. document the implemented infrastructure and delivery flows in more depth
-3. introduce Kyverno in a dedicated next session
-4. document the future secure container supply chain direction explicitly as planned architecture
-5. expand the component-level and runbook-level documentation
+2. document the implemented Kyverno component and runbook
+3. keep the first Kyverno policies stable and understandable
+4. progressively add additional `Audit` policies only where they provide clear value
+5. document the future secure container supply chain direction explicitly as planned architecture
+6. expand the component-level and runbook-level documentation
 
 ## Documentation Rule
 
 Every architecture document in this repository should, whenever relevant, distinguish between:
-
 - **Current state**
 - **Planned capabilities**
 - **Gap analysis**

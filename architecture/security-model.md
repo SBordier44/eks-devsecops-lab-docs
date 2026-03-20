@@ -5,7 +5,6 @@
 This document describes the current and target security model of the EKS DevSecOps Lab.
 
 Its goal is to explain:
-
 - which security controls are already implemented
 - which security choices are deliberate trade-offs
 - which security capabilities are still planned
@@ -16,7 +15,6 @@ Its goal is to explain:
 The lab is not presented as a fully hardened enterprise platform.
 
 Instead, it follows a progressive security approach:
-
 - establish a clean and realistic technical baseline
 - introduce practical controls early where they bring clear value
 - avoid over-engineering the platform too early
@@ -32,7 +30,6 @@ The current validated platform already includes meaningful security-related cont
 ### Infrastructure Security
 
 Current implemented elements include:
-
 - infrastructure as code with Terraform and Terragrunt
 - remote state stored in S3 with DynamoDB locking
 - no long-lived AWS credentials in GitHub for CI access
@@ -42,7 +39,6 @@ Current implemented elements include:
 ### Registry and Image Security
 
 Current implemented elements include:
-
 - Amazon ECR as the image registry
 - immutable tags
 - scan on push
@@ -52,15 +48,15 @@ Current implemented elements include:
 ### Application Runtime Security
 
 Current implemented elements include:
-
 - a non-root runtime container image for the demo application
 - a distroless final image approach
 - Kubernetes deployment through GitOps rather than manual ad hoc runtime operations
+- runtime resource requests and limits defined on the demo application
+- workload-level `securityContext` already defined for the demo application
 
 ### Delivery and Change Security
 
 Current implemented elements include:
-
 - separation of concerns between infra, app, GitOps, and docs repositories
 - Git-based desired state for Kubernetes
 - ArgoCD automated reconciliation
@@ -69,7 +65,6 @@ Current implemented elements include:
 ### Exposure and TLS Security
 
 Current implemented elements include:
-
 - public HTTPS exposure
 - automated certificate lifecycle with cert-manager
 - Let's Encrypt production certificates
@@ -78,22 +73,30 @@ Current implemented elements include:
 ### Secrets Security
 
 Current implemented elements include:
-
 - AWS Secrets Manager as the upstream secret source
 - External Secrets Operator
 - IRSA-based authentication from Kubernetes to AWS
 - no static AWS access keys stored in Kubernetes manifests for this integration
 
+### Governance and Admission Security
+
+Current implemented elements include:
+- Kyverno deployed through ArgoCD
+- GitOps-managed policy definitions
+- an audit-first validation strategy
+- first `ClusterPolicy` controls applied to `demo-app-dev`
+- current checks on workload resource definitions and selected container `securityContext` fields
+
 ## Current Security Strengths
 
 The current platform already demonstrates several strong security signals for a lab environment:
-
 - modern cloud authentication patterns
 - reduction of static credentials
 - safer runtime image choices
 - real TLS automation
 - externalized secret management
 - GitOps-based deployment discipline
+- initial admission-time governance controls
 - clean repository separation by responsibility
 
 ## Current Security Trade-Offs
@@ -103,11 +106,11 @@ The lab also includes explicit trade-offs.
 These are not hidden and should be understood as part of the current maturity stage.
 
 Examples include:
-
 - the platform is optimized for clarity and learning value, not maximum enterprise hardening
-- governance and policy enforcement are still limited
+- current Kyverno coverage remains intentionally narrow
+- the first policies are non-blocking and limited to `Audit`
 - the current environment focus remains primarily on a single development baseline
-- advanced runtime and admission controls are not yet deployed
+- advanced runtime and admission controls are only partially introduced
 - supply chain hardening is still at an early stage
 
 These trade-offs are acceptable as long as they are documented honestly.
@@ -119,10 +122,10 @@ The target platform direction includes several important planned security improv
 ### Platform Governance
 
 Planned:
-- Kyverno deployment
-- audit-first policy strategy
+- broader Kyverno policy coverage
+- additional audit-first controls
 - later progressive policy enforcement
-- stronger workload governance
+- stronger workload governance beyond the initial demo scope
 
 ### Secure Container Supply Chain
 
@@ -151,10 +154,9 @@ Planned:
 ## Gap Analysis
 
 Main gaps between the current security baseline and the target security model include:
-
-- no policy engine currently enforces workload security rules
+- only a small initial subset of workload security rules is currently codified
 - secure container supply chain controls remain limited
-- runtime governance is still minimal
+- runtime governance is still partial
 - security documentation is growing but not yet complete
 - the lab still needs more explicit codification of security guardrails
 
@@ -163,7 +165,6 @@ Main gaps between the current security baseline and the target security model in
 This security model is credible because it does not pretend that every security topic is already solved.
 
 Instead, it shows:
-
 - real implemented controls
 - real design decisions
 - real cloud-native patterns
@@ -175,10 +176,9 @@ That is more valuable than presenting an unrealistic â€œfully secure by defaultâ
 ## Next Steps
 
 The next logical steps for the security model are:
-
 1. complete the current architecture documentation baseline
-2. document the current security controls more explicitly in component and runbook documents
-3. introduce Kyverno progressively in a dedicated next platform iteration
+2. document the current Kyverno controls more explicitly in component and runbook documents
+3. keep the first audit policies stable before widening scope
 4. document the secure container supply chain target architecture more deeply
 5. expand the ADR set to capture major security decisions
 
@@ -186,5 +186,4 @@ The next logical steps for the security model are:
 
 The current security model of the lab is already meaningful and technically credible.
 
-It is best understood as a progressive DevSecOps baseline:
-strong enough to demonstrate real engineering practices today, and structured enough to evolve toward broader governance and security maturity over time.
+It is best understood as a progressive DevSecOps baseline: strong enough to demonstrate real engineering practices today, and structured enough to evolve toward broader governance and security maturity over time.
