@@ -1,42 +1,39 @@
-# ADR-0002 Terraform and Terragrunt Live Layout
+# ADR 0002 - Utiliser Terraform avec Terragrunt et une structure live dédiée
 
-## Context
-The lab infrastructure is managed as code on AWS and needs to stay modular, readable, and easy to evolve.
+## Statut
 
-The platform includes multiple infrastructure concerns such as:
+Accepté
 
-- networking
-- EKS
-- ECR
-- GitHub OIDC federation
+## Contexte
 
-A simple flat Terraform structure would become harder to maintain as the lab grows.
+L’infrastructure AWS du lab devait rester :
 
-## Decision
-Terraform modules are separated from the live environment configuration.
+- modulaire
+- lisible
+- maintenable
+- raisonnable en duplication
 
-The infrastructure repository uses:
+## Décision
 
-- reusable Terraform modules under `modules/`
-- Terragrunt live configuration under `live/dev/`
+Utiliser :
 
-The current live stacks are organized by concern:
+- **Terraform** pour les ressources
+- **Terragrunt** pour la structure live, la centralisation de configuration et la gestion plus propre des dépendances
 
-- `vpc`
-- `eks`
-- `ecr`
-- `github-oidc`
+## Conséquences
 
-Remote state is centralized in AWS using:
+### Positives
 
-- S3 for Terraform state storage
-- DynamoDB for state locking
+- meilleure organisation des stacks
+- configuration partagée centralisée
+- dépendances explicites
+- meilleure évolutivité
 
-## Consequences
-This layout provides:
+### Négatives
 
-- clearer separation between reusable building blocks and environment-specific configuration
-- cleaner dependency management between infrastructure stacks
-- a more realistic infrastructure-as-code structure for a DevSecOps platform
-- safer collaboration through remote state locking
-- a better foundation for future growth without over-engineering the current lab
+- un outil supplémentaire à maîtriser
+- une structure plus élaborée qu’un simple Terraform monolithique
+
+## Remarque de phase 2
+
+Cette décision reste pleinement valable comme socle de la phase AWS validée, même si le runtime actif est ensuite sorti d’AWS.

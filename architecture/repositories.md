@@ -1,186 +1,179 @@
-# Repository Architecture
+# Architecture des dépôts
 
-## Purpose
+## Objectif
 
-The lab is intentionally split across multiple repositories to separate concerns and make the platform easier to understand, operate, and evolve.
+Le lab est volontairement réparti en plusieurs dépôts afin de séparer les responsabilités et de rendre la plateforme plus lisible, plus simple à faire évoluer et plus proche d’une organisation d’ingénierie réaliste.
 
-This structure also mirrors a more realistic engineering setup where infrastructure, application code, deployment state, and documentation are managed independently.
+Cette structuration reflète un fonctionnement courant où l’infrastructure, le code applicatif, l’état de déploiement et la documentation vivent dans des dépôts distincts.
 
-## Repository List
+## Liste des dépôts
 
 ### 1. eks-devsecops-lab-infra
 
-This repository is responsible for provisioning and managing the AWS infrastructure layer.
+Ce dépôt est responsable de la **phase AWS validée**.
 
-It includes:
+Il contient :
 
-- Terraform modules
-- Terragrunt live configuration
-- VPC provisioning
-- EKS provisioning
-- ECR provisioning
-- GitHub OIDC federation resources
-- remote state configuration strategy
+- les modules Terraform
+- la structure Terragrunt du live
+- le provisionnement du VPC
+- le provisionnement EKS
+- le provisionnement ECR
+- les ressources GitHub OIDC
+- la stratégie de remote state Terraform
 
-This repository does **not** deploy applications into Kubernetes.
-
----
+Ce dépôt ne déploie pas directement les applications dans Kubernetes.
 
 ### 2. eks-devsecops-lab-app
 
-This repository contains the demo application and its delivery pipeline.
+Ce dépôt contient la **demo-app** et son pipeline de delivery.
 
-It includes:
+Il comprend :
 
-- Go application source code
-- Dockerfile
-- GitHub Actions workflow for image build and push
-- image publication to Amazon ECR
-- GitOps repository update after image publication
+- le code source Go
+- le Dockerfile
+- le workflow GitHub Actions de build et de publication d’image
+- la logique de mise à jour du dépôt GitOps après publication
 
-This repository does **not** own the Kubernetes deployment manifests.
-
----
+Ce dépôt ne porte pas les manifests Kubernetes.
 
 ### 3. eks-devsecops-lab-gitops
 
-This repository is the Kubernetes deployment source of truth.
+Ce dépôt est la **source de vérité Kubernetes**.
 
-It includes:
+Il comprend :
 
-- ArgoCD bootstrap resources
-- ArgoCD applications
-- Kustomize bases and overlays
-- demo application manifests
-- ingress resources
-- cert-manager resources
-- External Secrets resources
+- les ressources de bootstrap ArgoCD
+- les applications ArgoCD
+- les bases et overlays Kustomize
+- les manifests de la demo-app
+- les ressources d’ingress
+- les ressources cert-manager
+- les ressources Kyverno
+- les chemins GitOps de la phase AWS et de la phase K3s
 
-This repository is responsible for describing the desired Kubernetes state.
-
----
+Ce dépôt décrit l’état désiré de la plateforme Kubernetes.
 
 ### 4. eks-devsecops-lab-docs
 
-This repository contains the documentation of the lab.
+Ce dépôt contient la documentation du lab.
 
-It includes:
+Il comprend :
 
-- architecture documentation
-- diagrams
-- ADRs
-- operational runbooks
-- design rationale
+- la documentation d’architecture
+- les ADR
+- les runbooks
+- les explications de conception
+- l’histoire d’évolution du projet
 
-This repository explains how the platform works and why key choices were made.
+## Pourquoi cette séparation est utile
 
-## Why This Split Matters
+Cette séparation apporte plusieurs avantages :
 
-This separation provides several benefits:
+- des frontières de responsabilité plus claires
+- un historique Git plus lisible
+- une meilleure compréhension de l’impact des changements
+- une meilleure cohérence avec GitOps
+- une documentation plus propre
+- une présentation portfolio plus crédible
 
-- cleaner ownership boundaries
-- clearer Git history by concern
-- easier reasoning about change impact
-- better alignment with GitOps principles
-- improved documentation quality
-- stronger portfolio presentation for real-world engineering practices
+## Interaction entre les dépôts
 
-## Interaction Between Repositories
+Le flux principal du lab actif est le suivant :
 
-The main flow between repositories is the following:
+1. le dépôt **app** construit et publie une image de conteneur
+2. le dépôt **app** met à jour le tag d’image dans le dépôt **GitOps**
+3. **ArgoCD** réconcilie l’état désiré depuis le dépôt **GitOps**
+4. le cluster **K3s** reçoit la nouvelle version
+5. le dépôt **docs** documente l’architecture, les choix et l’exploitation
 
-1. the **infra repository** provisions AWS resources
-2. the **app repository** builds and publishes a container image to ECR
-3. the **app repository** updates the image tag in the **GitOps repository**
-4. **ArgoCD** reconciles the desired state from the **GitOps repository**
-5. the **docs repository** documents architecture, decisions, and operations
+La phase AWS reste documentée par le dépôt **infra**, mais n’est plus le runtime principal utilisé au quotidien.
 
-## Implemented State vs Repository Intent
+## État validé, état actif et intention
 
-Some repositories already include README sections describing future phases or target capabilities that are not yet fully implemented.
+Cette documentation sépare volontairement :
 
-This documentation intentionally separates:
+- l’**état validé**, fondé sur des capacités réellement mises en œuvre et testées dans la phase AWS
+- l’**état actif**, fondé sur le runtime K3s actuellement utilisé
+- l’**intention d’architecture**, fondée sur la roadmap et les évolutions visées
 
-- the **implemented state**, based on the actual repository content and validated platform behavior
-- the **repository intent**, based on roadmap elements and future architecture directions already documented in project README files
+Les trois dimensions sont utiles :
 
-Both views are useful:
+- l’état validé prouve la profondeur technique
+- l’état actif prouve la continuité d’exploitation
+- l’intention montre la maturité et la trajectoire du projet
 
-- the implemented state proves hands-on delivery
-- the repository intent shows architectural direction and platform maturity goals
+## Source de vérité par sujet
 
-## Source of Truth by Topic
+### Phase infrastructure AWS
 
-### AWS infrastructure
-Source of truth: `eks-devsecops-lab-infra`
+Source de vérité : `eks-devsecops-lab-infra`
 
-### Container image build and publication
-Source of truth: `eks-devsecops-lab-app`
+### Build applicatif et publication d’image
 
-### Kubernetes deployment state
-Source of truth: `eks-devsecops-lab-gitops`
+Source de vérité : `eks-devsecops-lab-app`
 
-### Architecture, rationale, and runbooks
-Source of truth: `eks-devsecops-lab-docs`
+### État Kubernetes désiré
 
-## Current Implemented Scope by Repository
+Source de vérité : `eks-devsecops-lab-gitops`
 
-### Infrastructure repository
-Implemented today:
-- AWS VPC and networking
+### Architecture, rationales et runbooks
+
+Source de vérité : `eks-devsecops-lab-docs`
+
+## Périmètre actuel par dépôt
+
+### Dépôt infrastructure
+
+Périmètre validé :
+
+- VPC et réseau AWS
 - Amazon EKS
 - Amazon ECR
-- GitHub OIDC federation
-- remote state setup
+- GitHub OIDC
+- remote state Terraform
 
-Planned or evolving topics:
-- stronger IAM scoping
-- additional hardening layers
-- future platform security enhancements
+### Dépôt application
 
-### Application repository
-Implemented today:
-- demo application
-- container build pipeline
-- push to ECR
-- GitOps image update flow
+Périmètre actif :
 
-Planned or evolving topics:
-- stronger secure supply chain controls
-- additional CI security hardening
+- demo-app
+- pipeline de build
+- publication d’image
+- mise à jour du dépôt GitOps
 
-### GitOps repository
-Implemented today:
-- ArgoCD bootstrap
-- demo application deployment
-- Traefik ingress
-- cert-manager and Let's Encrypt
-- External Secrets integration
+### Dépôt GitOps
 
-Planned or evolving topics:
-- Kyverno
-- additional governance controls
-- broader platform policies
+Périmètre actif :
 
-### Documentation repository
-Implemented today:
-- baseline architecture structure
-- ADR foundation
-- architecture documentation effort in progress
+- bootstrap ArgoCD pour K3s
+- déploiement de la demo-app sur K3s
+- Traefik
+- cert-manager et Let’s Encrypt
+- Kyverno et policies initiales
 
-Planned or evolving topics:
-- richer diagrams
-- fuller component documentation
-- stronger runbooks
-- broader architecture storytelling
+Périmètre validé mais non actif :
 
-## Practical Reading Order
+- External Secrets Operator
+- ressources AWS-oriented de la phase EKS
+- overlays et bootstrap liés à AWS
 
-For someone discovering the project, the recommended order is:
+### Dépôt documentation
+
+Périmètre actuel :
+
+- documentation de la phase AWS validée
+- documentation de la phase active K3s
+- narration de transition de plateforme
+- ADR et runbooks
+
+## Ordre de lecture recommandé
+
+Pour une personne qui découvre le projet, l’ordre de lecture conseillé est :
 
 1. `eks-devsecops-lab-docs`
 2. `eks-devsecops-lab-infra`
 3. `eks-devsecops-lab-app`
 4. `eks-devsecops-lab-gitops`
 
-This order gives context first, then infrastructure, then delivery, then runtime state.
+Cet ordre donne d’abord le contexte, puis la phase cloud validée, ensuite le delivery applicatif, puis enfin l’état de déploiement.

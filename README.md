@@ -1,72 +1,100 @@
-# EKS DevSecOps Lab Documentation
+# Documentation du lab EKS DevSecOps
 
-This repository contains the architecture documentation, ADRs, and operational guides for the **EKS DevSecOps Lab**. Architecture visuals may be added progressively when they provide clear value.
+Ce dépôt contient la documentation d’architecture, les ADR et les runbooks du projet **eks-devsecops-lab**.
 
-The goal of this lab is to design, build, and operate a **production-like Kubernetes platform on AWS** while applying practical **DevSecOps**, **GitOps**, and **platform engineering** practices.
+Le lab a été construit en deux phases complémentaires :
 
-## Objectives
+- **Phase 1 validée sur AWS** : infrastructure provisionnée avec **Terraform** et **Terragrunt**, cluster **Amazon EKS**, registre **Amazon ECR**, authentification **GitHub OIDC**, gestion des secrets avec **External Secrets Operator**, **AWS Secrets Manager** et **IRSA**
+- **Phase 2 active sur VPS K3s** : continuation du lab sur un **VPS K3s** afin de poursuivre l’évolution de la plateforme avec **ArgoCD**, **Traefik**, **cert-manager**, **Let’s Encrypt**, **Kyverno** et la **demo-app** déployée en GitOps, sans conserver un coût AWS permanent
 
-This lab is used to demonstrate hands-on capabilities in:
-- AWS infrastructure design with **Terraform** and **Terragrunt**
-- Kubernetes platform operations with **Amazon EKS**
-- GitOps deployment workflows with **ArgoCD**
-- Secure container delivery with **GitHub Actions** and **Amazon ECR**
-- HTTPS exposure with **Traefik**, **cert-manager**, and **Let's Encrypt**
-- Secret management with **External Secrets Operator**, **AWS Secrets Manager**, and **IRSA**
-- Progressive platform hardening and security controls with **Kyverno**
+L’objectif du projet est de démontrer une capacité réelle à **concevoir**, **déployer**, **opérer** et **faire évoluer** une plateforme Kubernetes de type production-like, avec une approche **DevSecOps**, **GitOps** et **platform engineering**, tout en gardant une trajectoire progressive et économiquement cohérente.
 
-## Repository Map
+## Objectifs
 
-The lab is split across four repositories:
+Le lab sert à démontrer des compétences concrètes sur :
+
+- la conception d’infrastructure cloud avec **Terraform** et **Terragrunt**
+- l’exploitation d’une plateforme Kubernetes avec **Amazon EKS** puis **K3s**
+- les déploiements déclaratifs avec **ArgoCD**
+- la chaîne de livraison de conteneurs avec **GitHub Actions**
+- l’exposition sécurisée en HTTPS avec **Traefik**, **cert-manager** et **Let’s Encrypt**
+- la gestion des secrets avec **External Secrets Operator**, **AWS Secrets Manager** et **IRSA** dans la phase AWS
+- la gouvernance et le durcissement progressif de workloads avec **Kyverno**
+- l’évolution d’une architecture sans repartir de zéro
+
+## Cartographie des dépôts
+
+Le lab est réparti en quatre dépôts :
+
 - **eks-devsecops-lab-infra**  
-  AWS infrastructure provisioning with Terraform and Terragrunt
+  Provisionnement de l’infrastructure AWS avec Terraform et Terragrunt
+
 - **eks-devsecops-lab-app**  
-  Demo application and CI pipeline used to build and publish a container image
+  Application de démonstration et pipeline CI/CD de build et publication d’image
+
 - **eks-devsecops-lab-gitops**  
-  Kubernetes manifests and ArgoCD applications used to deploy workloads to the cluster
+  Manifests Kubernetes, applications ArgoCD et overlays Kustomize
+
 - **eks-devsecops-lab-docs**  
-  Architecture documentation, diagrams, ADRs, and runbooks
+  Documentation d’architecture, ADR et guides opérationnels
 
-## Current vs Target Platform Scope
+## Portée actuelle de la documentation
 
-This documentation intentionally distinguishes between:
-- **Implemented capabilities**: features currently deployed and validated in the lab
-- **Planned capabilities**: features already identified in repository roadmaps or README files, but not yet implemented
-- **Target platform direction**: the broader platform engineering vision for the lab
+Cette documentation distingue volontairement trois niveaux :
 
-This distinction is important to keep the documentation transparent, credible, and professionally useful.
+- **Capacités validées** : éléments réellement implémentés et validés pendant la phase AWS
+- **Capacités actives** : éléments actuellement utilisés sur la plateforme K3s
+- **Capacités planifiées** : éléments identifiés comme prochaines étapes du lab
 
-### Implemented Capabilities
+Cette séparation est importante pour rester transparent, crédible et professionnel.
 
-The lab currently includes:
-- AWS networking and Kubernetes infrastructure
-- Terraform remote state with S3 and DynamoDB
-- Amazon EKS cluster with managed node group
-- Amazon ECR container registry
-- GitHub Actions to AWS authentication through OIDC
-- ArgoCD bootstrap and GitOps deployment model
-- demo application deployment through GitOps
-- Ingress management with Traefik
-- TLS automation with cert-manager and Let's Encrypt
-- Secret synchronization from AWS Secrets Manager to Kubernetes with External Secrets Operator and IRSA
-- Kyverno deployment through ArgoCD
-- first Kyverno `Audit` policies for workload governance on `demo-app-dev`
+## Phase 1 validée : plateforme cloud AWS
 
-### Planned Capabilities
+La phase AWS, conservée comme preuve forte du projet, comprend :
 
-The target platform direction currently includes:
-- broader Kyverno policy coverage beyond the initial demo application scope
-- later progressive enforcement of selected governance controls
-- secure container supply chain hardening
-- additional platform security controls
-- richer observability and operational runbooks
-- broader policy, compliance, and platform guardrails
+- réseau AWS et fondation VPC
+- remote state Terraform avec S3 et DynamoDB
+- cluster Amazon EKS avec managed node group
+- registre d’images Amazon ECR
+- authentification GitHub Actions vers AWS via OIDC
+- bootstrap ArgoCD et modèle GitOps
+- déploiement de la demo-app via GitOps
+- exposition via Traefik
+- automatisation TLS avec cert-manager et Let’s Encrypt
+- synchronisation de secrets depuis AWS Secrets Manager vers Kubernetes avec External Secrets Operator et IRSA
+- installation de Kyverno via ArgoCD
+- premières policies Kyverno en mode `Audit` sur `demo-app-dev`
 
-## Documentation Structure
+## Phase 2 active : runtime K3s sur VPS
+
+La phase active du lab comprend désormais :
+
+- cluster **K3s single-node** sur VPS
+- bootstrap ArgoCD dédié à K3s
+- réconciliation GitOps active depuis le dépôt GitOps
+- **Traefik** pour l’ingress
+- **cert-manager** avec certificats Let’s Encrypt en production
+- **Kyverno** et policies initiales déjà en place
+- déploiement GitOps de la **demo-app** sur un overlay `k3s-dev`
+- exposition publique de l’application avec TLS valide
+- sortie du runtime applicatif hors AWS
+- registre d’images cible de la phase 2 : **GHCR**
+
+## Capacités planifiées
+
+Les prochaines étapes du lab incluent notamment :
+
+- définir une stratégie de gestion des secrets compatible K3s pour la phase active
+- élargir progressivement la couverture Kyverno
+- faire évoluer certaines règles de `Audit` vers `Enforce` lorsque cela sera justifié
+- renforcer la supply chain du conteneur
+- ajouter d’autres contrôles de sécurité plateforme
+- enrichir l’observabilité et les runbooks
+
+## Structure de la documentation
 
 ### Architecture
 
-High-level and detailed technical views of the platform:
 - `architecture/overview.md`
 - `architecture/repositories.md`
 - `architecture/aws-terraform-terragrunt.md`
@@ -80,7 +108,6 @@ High-level and detailed technical views of the platform:
 
 ### Components
 
-One document per major platform building block:
 - `components/vpc.md`
 - `components/ecr.md`
 - `components/github-oidc.md`
@@ -94,7 +121,6 @@ One document per major platform building block:
 
 ### Runbooks
 
-Operational and troubleshooting guides:
 - `runbooks/terraform-terragrunt.md`
 - `runbooks/argocd.md`
 - `runbooks/ingress-tls.md`
@@ -104,41 +130,45 @@ Operational and troubleshooting guides:
 
 ### ADR
 
-Architecture Decision Records documenting major choices and trade-offs.
+Les **Architecture Decision Records** documentent les choix structurants, leurs raisons et leurs compromis.
 
-### Diagrams
+### Schémas
 
-Architecture visuals may be added progressively when they provide clear value. When useful, lightweight Markdown-friendly formats such as Mermaid will be preferred.
+Des visuels d’architecture peuvent être ajoutés progressivement lorsqu’ils apportent une vraie valeur. Lorsque c’est pertinent, des formats simples et maintenables comme **Mermaid** sont à privilégier.
 
-## Design Principles
+## Principes de conception
 
-This lab follows a few simple principles:
-- **Keep the platform understandable**
-- **Prefer progressive implementation over over-engineering**
-- **Use Git as the source of truth**
-- **Separate infrastructure, application, deployment, and documentation concerns**
-- **Favor reproducibility, traceability, and operational clarity**
-- **Balance security improvements with cost awareness**
+Le lab suit quelques principes simples :
 
-## Who This Repository Is For
+- garder la plateforme compréhensible
+- avancer par étapes sans sur-ingénierie
+- utiliser Git comme source de vérité
+- séparer infrastructure, application, déploiement et documentation
+- privilégier la reproductibilité, la traçabilité et la clarté opérationnelle
+- équilibrer amélioration de la sécurité et maîtrise des coûts
 
-This repository is intended for:
-- recruiters and hiring managers
-- clients evaluating platform engineering or DevSecOps capabilities
-- engineers reviewing the lab architecture
-- the project owner as a long-term operational reference
+## Public visé
 
-## Status
+Ce dépôt s’adresse à :
 
-The lab is evolving iteratively. Documentation is built to reflect:
-- the **real implemented state**
-- the **planned next capabilities**
-- the **target platform direction**
+- des recruteurs et hiring managers
+- des clients évaluant des compétences DevOps / DevSecOps / plateforme
+- des ingénieurs relisant l’architecture
+- le propriétaire du projet comme référence long terme
 
-This repository aims to document both delivery and architectural intent without mixing them.
+## Statut
 
-## Related Repositories
+Le lab évolue de manière itérative.  
+La documentation a vocation à refléter :
 
-- Infrastructure: [eks-devsecops-lab-infra](https://github.com/SBordier44/eks-devsecops-lab-infra)
-- Application: [eks-devsecops-lab-app](https://github.com/SBordier44/eks-devsecops-lab-app)
-- GitOps: [eks-devsecops-lab-gitops](https://github.com/SBordier44/eks-devsecops-lab-gitops)
+- l’état réellement validé
+- l’état actuellement actif
+- les prochaines évolutions envisagées
+
+Le but est de documenter à la fois la réalité du delivery et l’intention d’architecture, sans les mélanger.
+
+## Dépôts liés
+
+- Infrastructure : `eks-devsecops-lab-infra`
+- Application : `eks-devsecops-lab-app`
+- GitOps : `eks-devsecops-lab-gitops`

@@ -1,189 +1,95 @@
-# Security Model
+# Modèle de sécurité de la plateforme
 
-## Purpose
+## Objectif
 
-This document describes the current and target security model of the EKS DevSecOps Lab.
+Ce document décrit le modèle de sécurité appliqué dans le lab, en distinguant ce qui a déjà été validé de ce qui est en cours d’extension.
 
-Its goal is to explain:
-- which security controls are already implemented
-- which security choices are deliberate trade-offs
-- which security capabilities are still planned
-- how security is being introduced progressively across the platform
+Le lab n’a pas vocation à prétendre couvrir toute la sécurité d’une plateforme d’entreprise, mais à montrer une trajectoire crédible, progressive et techniquement cohérente.
 
-## Security Philosophy
+## Principes
 
-The lab is not presented as a fully hardened enterprise platform.
+Le modèle de sécurité du lab repose sur quelques idées simples :
 
-Instead, it follows a progressive security approach:
-- establish a clean and realistic technical baseline
-- introduce practical controls early where they bring clear value
-- avoid over-engineering the platform too early
-- make trade-offs explicit
-- improve security iteratively as the platform matures
+- améliorer la sécurité par couches
+- éviter la complexité gratuite
+- privilégier les mécanismes natifs et compréhensibles
+- garder une traçabilité forte par Git
+- ajouter les garde-fous progressivement plutôt que tout bloquer d’un coup
 
-This approach is intentional and aligned with the overall architecture principles of the lab.
+## Sécurité déjà démontrée
 
-## Current Implemented Security Baseline
+Le lab démontre déjà plusieurs briques de sécurité :
 
-The current validated platform already includes meaningful security-related controls across several layers.
+- provisioning d’infrastructure par code
+- séparation claire des dépôts
+- usage de GitOps pour la réconciliation
+- exposition TLS automatique
+- image applicative minimale et non-root
+- authentification GitHub vers AWS via OIDC dans la phase cloud
+- utilisation d’IRSA dans la phase AWS
+- policies Kyverno initiales en mode `Audit`
 
-### Infrastructure Security
+## Couche runtime
 
-Current implemented elements include:
-- infrastructure as code with Terraform and Terragrunt
-- remote state stored in S3 with DynamoDB locking
-- no long-lived AWS credentials in GitHub for CI access
-- GitHub OIDC federation to AWS
-- IRSA enabled for Kubernetes-to-AWS access patterns
+### Phase AWS validée
 
-### Registry and Image Security
+Pendant la phase AWS, la sécurité du runtime s’appuyait notamment sur :
 
-Current implemented elements include:
-- Amazon ECR as the image registry
-- immutable tags
-- scan on push
-- encryption at rest
-- lifecycle rules to control image sprawl
+- IAM / OIDC
+- IRSA
+- un registre ECR dédié
+- ESO branché sur AWS Secrets Manager
+- Kyverno déployé via GitOps
 
-### Application Runtime Security
+### Phase K3s active
 
-Current implemented elements include:
-- a non-root runtime container image for the demo application
-- a distroless final image approach
-- Kubernetes deployment through GitOps rather than manual ad hoc runtime operations
-- runtime resource requests and limits defined on the demo application
-- workload-level `securityContext` already defined for the demo application
+Dans la phase active K3s, le socle de sécurité repose sur :
 
-### Delivery and Change Security
+- GitOps avec ArgoCD
+- Traefik et TLS Let’s Encrypt
+- policies Kyverno initiales
+- base applicative simple et lisible
+- séparation claire entre ce qui est déjà actif et ce qui reste à faire
 
-Current implemented elements include:
-- separation of concerns between infra, app, GitOps, and docs repositories
-- Git-based desired state for Kubernetes
-- ArgoCD automated reconciliation
-- traceable deployment changes through Git commits
+## Gouvernance des workloads avec Kyverno
 
-### Exposure and TLS Security
+Le lab applique déjà une première gouvernance Kyverno sur `demo-app-dev`.
 
-Current implemented elements include:
-- public HTTPS exposure
-- automated certificate lifecycle with cert-manager
-- Let's Encrypt production certificates
-- ingress routing through Traefik
+Les premières règles sont non bloquantes et tournent en mode `Audit`, ce qui permet :
 
-### Secrets Security
+- d’observer les écarts
+- d’éviter la casse brutale
+- de renforcer progressivement la politique plateforme
 
-Current implemented elements include:
-- AWS Secrets Manager as the upstream secret source
-- External Secrets Operator
-- IRSA-based authentication from Kubernetes to AWS
-- no static AWS access keys stored in Kubernetes manifests for this integration
+Cette approche progressive est volontaire.
 
-### Governance and Admission Security
+## Secrets
 
-Current implemented elements include:
-- Kyverno deployed through ArgoCD
-- GitOps-managed policy definitions
-- an audit-first validation strategy
-- first `ClusterPolicy` controls applied to `demo-app-dev`
-- current checks on workload resource definitions and selected container `securityContext` fields
+La phase AWS validée inclut un modèle de secrets propre et réaliste.  
+La phase K3s active n’a pas encore son modèle cible. Ce point est assumé et documenté comme prochaine étape.
 
-## Current Security Strengths
+## Supply chain
 
-The current platform already demonstrates several strong security signals for a lab environment:
-- modern cloud authentication patterns
-- reduction of static credentials
-- safer runtime image choices
-- real TLS automation
-- externalized secret management
-- GitOps-based deployment discipline
-- initial admission-time governance controls
-- clean repository separation by responsibility
+Le lab dispose déjà d’une supply chain claire, mais son durcissement sécurité reste encore en progression.
 
-## Current Security Trade-Offs
+Les prochaines étapes attendues concernent notamment :
 
-The lab also includes explicit trade-offs.
+- SBOM
+- signature d’images
+- meilleure formalisation de la chaîne de confiance
 
-These are not hidden and should be understood as part of the current maturity stage.
+## Limites assumées
 
-Examples include:
-- the platform is optimized for clarity and learning value, not maximum enterprise hardening
-- current Kyverno coverage remains intentionally narrow
-- the first policies are non-blocking and limited to `Audit`
-- the current environment focus remains primarily on a single development baseline
-- advanced runtime and admission controls are only partially introduced
-- supply chain hardening is still at an early stage
+Le modèle de sécurité actuel n’est pas exhaustif.
 
-These trade-offs are acceptable as long as they are documented honestly.
+Il manque encore, selon la cible finale :
 
-## Planned Security Evolution
+- une stratégie de secrets active sur K3s
+- un périmètre de policies plus large
+- davantage de garde-fous réseau et RBAC si le lab continue d’évoluer
+- une observabilité sécurité plus riche
 
-The target platform direction includes several important planned security improvements.
+## Résumé
 
-### Platform Governance
-
-Planned:
-- broader Kyverno policy coverage
-- additional audit-first controls
-- later progressive policy enforcement
-- stronger workload governance beyond the initial demo scope
-
-### Secure Container Supply Chain
-
-Planned:
-- stronger CI security controls
-- better artifact trust strategy
-- image signing or attestation direction
-- tighter coupling between supply chain state and cluster policy
-
-### Platform Hardening
-
-Planned:
-- more explicit workload security expectations
-- stronger policy coverage
-- richer security ADRs
-- expanded security runbooks
-
-### Operational Security Documentation
-
-Planned:
-- troubleshooting guides
-- validation procedures
-- security-oriented operational checks
-- documentation of security assumptions and limitations
-
-## Gap Analysis
-
-Main gaps between the current security baseline and the target security model include:
-- only a small initial subset of workload security rules is currently codified
-- secure container supply chain controls remain limited
-- runtime governance is still partial
-- security documentation is growing but not yet complete
-- the lab still needs more explicit codification of security guardrails
-
-## Why This Security Model Is Credible
-
-This security model is credible because it does not pretend that every security topic is already solved.
-
-Instead, it shows:
-- real implemented controls
-- real design decisions
-- real cloud-native patterns
-- real trade-offs
-- a clear and professional maturity path
-
-That is more valuable than presenting an unrealistic “fully secure by default” narrative.
-
-## Next Steps
-
-The next logical steps for the security model are:
-1. complete the current architecture documentation baseline
-2. document the current Kyverno controls more explicitly in component and runbook documents
-3. keep the first audit policies stable before widening scope
-4. document the secure container supply chain target architecture more deeply
-5. expand the ADR set to capture major security decisions
-
-## Summary
-
-The current security model of the lab is already meaningful and technically credible.
-
-It is best understood as a progressive DevSecOps baseline: strong enough to demonstrate real engineering practices today, and structured enough to evolve toward broader governance and security maturity over time.
+Le modèle de sécurité du lab est déjà crédible et cohérent.  
+La phase AWS prouve une intégration cloud sérieuse, et la phase K3s poursuit le durcissement de manière pragmatique, sans prétendre avoir déjà atteint l’état final.

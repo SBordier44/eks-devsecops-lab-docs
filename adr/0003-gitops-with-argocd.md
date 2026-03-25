@@ -1,35 +1,36 @@
-# ADR-0003 GitOps with ArgoCD
+# ADR 0003 - Adopter GitOps avec ArgoCD
 
-## Context
-The lab needs a deployment model that is:
+## Statut
 
-- declarative
-- traceable
-- reproducible
-- easy to review
+Accepté
 
-Deploying directly from CI to Kubernetes would tightly couple build workflows and runtime changes, and would reduce visibility of the desired cluster state.
+## Contexte
 
-## Decision
-The platform uses GitOps with ArgoCD.
+Le lab devait démontrer un mode de déploiement Kubernetes :
 
-The desired Kubernetes state is stored in the dedicated GitOps repository.
+- déclaratif
+- traçable
+- reproductible
+- proprement séparé du pipeline de build
 
-ArgoCD is bootstrapped with a root application and reconciles:
+## Décision
 
-- the demo application
-- Traefik
-- cert-manager
-- Let's Encrypt issuers
-- External Secrets resources
+Adopter **ArgoCD** comme moteur GitOps, avec un dépôt dédié contenant l’état désiré du cluster.
 
-CI builds and publishes the application image, then updates the GitOps repository instead of deploying directly to the cluster.
+## Conséquences
 
-## Consequences
-This decision provides:
+### Positives
 
-- a clear separation between build and deployment responsibilities
-- Git as the source of truth for Kubernetes state
-- better traceability of deployed versions
-- automated reconciliation and drift correction
-- a more credible platform engineering and GitOps operating model
+- séparation claire entre CI et déploiement
+- meilleur audit des changements
+- self-heal et prune
+- forte cohérence d’exploitation
+
+### Négatives
+
+- couche supplémentaire à opérer
+- nécessité d’un dépôt GitOps bien structuré
+
+## Remarque de phase 2
+
+Cette décision est l’une de celles qui ont le mieux résisté à l’évolution du projet : elle reste valable aussi bien dans la phase AWS que dans la phase K3s.

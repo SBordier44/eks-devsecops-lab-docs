@@ -1,138 +1,73 @@
-# ArgoCD Component
+# Composant ArgoCD
 
-## Purpose
+## Objectif
 
-This document describes the ArgoCD component of the EKS DevSecOps Lab.
+Ce document décrit le rôle d’**ArgoCD** dans le lab.
 
-It explains:
+Il explique :
 
-- the role of ArgoCD in the platform
-- the current bootstrap and reconciliation model
-- the relationship between the GitOps repository and the cluster
-- what is already implemented
-- what remains planned for future maturity
+- le rôle d’ArgoCD dans la plateforme
+- le modèle de bootstrap
+- le fonctionnement de la réconciliation
+- la coexistence entre la phase AWS validée et la phase K3s active
 
-## Current Role
+## Rôle du composant
 
-ArgoCD is the GitOps reconciliation engine of the lab.
+ArgoCD est le moteur de réconciliation GitOps du lab.
 
-Its role is to:
+Il permet de :
 
-- read Kubernetes desired state from the GitOps repository
-- reconcile that desired state into the cluster
-- deploy both workloads and selected platform services
-- continuously correct drift when the cluster differs from Git
+- lire l’état désiré depuis Git
+- réconcilier cet état dans le cluster
+- déployer les composants plateforme et applicatifs
+- corriger la dérive entre Git et le cluster
 
-ArgoCD is therefore one of the most central components of the current platform baseline.
+## Modèle de bootstrap
 
-## Current Bootstrap Model
+Le projet comporte deux points d’entrée GitOps importants :
 
-The platform currently uses a root ArgoCD application.
+### Phase AWS validée
 
-The bootstrap entrypoint is an application named `gitops-root`, pointing to the `argocd` directory of the GitOps repository.
+Une application racine pointait vers le layout GitOps AWS-oriented.
 
-This creates a simple and understandable model:
+### Phase K3s active
 
-- bootstrap ArgoCD once
-- let ArgoCD manage the rest from Git
+Une application racine dédiée pointe vers le layout `argocd-k3s/`.
 
-## Current GitOps Scope
+Cette séparation permet de poursuivre le lab sur K3s sans embarquer directement les ressources encore liées à AWS.
 
-The current ArgoCD layer already manages:
+## Périmètre actif
 
-- the demo application deployment
+ArgoCD gère actuellement sur K3s :
+
 - Traefik
 - cert-manager
-- Let's Encrypt ClusterIssuer resources
-- External Secrets CRDs
-- External Secrets Operator
-- the AWS ClusterSecretStore resource
+- les `ClusterIssuer`
+- Kyverno
+- les policies Kyverno
+- la demo-app
 
-This shows that ArgoCD already owns both:
-- workload delivery
-- selected platform service delivery
+## Forces du composant
 
-## Current Reconciliation Model
+ArgoCD démontre :
 
-The current ArgoCD applications use automated sync.
+- un vrai modèle GitOps
+- la synchro automatique
+- le prune
+- le self-heal
+- la séparation CI / réconciliation cluster
+- la capacité à conserver le même modèle malgré un changement de runtime
 
-That means the current model already includes:
+## Limites actuelles
 
-- automated synchronization
-- pruning
-- self-healing
-- namespace creation where relevant
+Le périmètre reste volontairement raisonnable :
 
-This is an important strength because it makes the platform continuously converge toward Git-declared desired state.
+- un cluster actif principal
+- une application principale
+- pas d’architecture multi-cluster
+- pas encore de stratégie active de secrets côté K3s
 
-## Current Repository Relationship
+## Résumé
 
-ArgoCD consumes the `eks-devsecops-lab-gitops` repository as the source of truth for Kubernetes runtime state.
-
-This is a deliberate separation of concerns:
-
-- the application repository builds the artifact
-- the GitOps repository owns deployment intent
-- ArgoCD owns cluster reconciliation
-
-This separation is one of the most valuable architectural characteristics of the lab.
-
-## Current Strengths
-
-The ArgoCD component already demonstrates:
-
-- real GitOps reconciliation
-- root application bootstrap
-- automated synchronization
-- workload and platform component management
-- clean separation between CI and cluster reconciliation
-- a practical and realistic GitOps operating model
-
-## Current Constraints
-
-The current ArgoCD scope intentionally remains simple.
-
-Examples include:
-
-- one main environment focus
-- one main application workload
-- no advanced multi-cluster model
-- no complex ApplicationSet architecture
-- no broad policy-driven governance layer yet
-
-These constraints are deliberate and aligned with the lab philosophy of progressive implementation.
-
-## Planned Evolution
-
-The target direction for ArgoCD and GitOps includes:
-
-- future governance integration with Kyverno
-- richer rollback and troubleshooting documentation
-- clearer policy layering around platform components
-- stronger documentation of change and promotion patterns
-
-These topics are part of the target platform direction rather than the currently validated baseline.
-
-## Gap Analysis
-
-Main gaps between the current ArgoCD baseline and the target direction include:
-
-- governance and policy controls are still limited
-- advanced operational runbooks are not yet complete
-- secure supply chain enforcement is not yet connected to cluster admission
-- the GitOps model is still intentionally narrow in scope
-
-## Next Steps
-
-The next logical steps for the ArgoCD component are:
-
-1. expand operational runbooks for sync, drift, and troubleshooting
-2. document the failure and recovery paths more explicitly
-3. later integrate future governance components progressively
-4. keep the current GitOps model simple and stable
-
-## Summary
-
-The ArgoCD component is already a major strength of the lab.
-
-It provides a real GitOps operating model with clean separation between build, desired state management, and runtime reconciliation.
+ArgoCD est un des composants les plus solides du lab.  
+Il assure la continuité d’exploitation entre la phase AWS validée et la phase K3s active.

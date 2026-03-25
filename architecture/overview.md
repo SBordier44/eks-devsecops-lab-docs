@@ -1,131 +1,154 @@
-# Architecture Overview
+# Vue d’ensemble de l’architecture
 
-## Purpose
+## Objectif
 
-The EKS DevSecOps Lab is a hands-on platform engineering project designed to simulate a small but realistic cloud-native delivery platform on AWS.
+Le **EKS DevSecOps Lab** est un projet de platform engineering pratique conçu pour démontrer une plateforme Kubernetes réaliste, avec une forte logique **DevSecOps**, **GitOps** et **cloud-native**.
 
-It is built as a public technical portfolio to demonstrate practical skills across infrastructure automation, Kubernetes operations, GitOps, container delivery, TLS exposure, and secret management.
+Le projet s’appuie aujourd’hui sur **deux phases d’architecture complémentaires** :
 
-## Scope
+- une **phase AWS validée**, construite autour de Terraform, Terragrunt, Amazon EKS, Amazon ECR, GitHub OIDC, External Secrets Operator, AWS Secrets Manager et IRSA
+- une **phase K3s active**, hébergée sur un VPS, qui permet de continuer l’évolution du lab avec les mêmes principes de delivery, de gouvernance et d’exploitation, tout en maîtrisant le coût du runtime
 
-This documentation describes the current and target architecture of the lab across four layers:
+Cette documentation n’a pas pour but de masquer ce changement, mais au contraire de l’expliquer proprement.
 
-1. **Infrastructure layer**  
-   AWS resources provisioned with Terraform and Terragrunt
+## Périmètre
 
-2. **Application delivery layer**  
-   Demo application build and publish workflow
+L’architecture du lab est décrite à travers quatre couches :
 
-3. **GitOps layer**  
-   Kubernetes deployment orchestration with ArgoCD
+1. **Couche infrastructure**  
+   Infrastructure AWS validée et infrastructure de runtime active sur VPS
 
-4. **Platform services layer**  
-   Ingress, TLS automation, secret synchronization, and future policy controls
+2. **Couche delivery applicatif**  
+   Build d’image, publication dans un registre et propagation du changement vers GitOps
 
-## Design Principles
+3. **Couche GitOps**  
+   Orchestration des déploiements Kubernetes avec ArgoCD
 
-The lab is intentionally built with a progressive and pragmatic approach:
+4. **Couche services plateforme**  
+   Ingress, TLS, gouvernance des workloads, sécurité progressive, gestion des secrets
 
-- keep the architecture understandable
-- avoid unnecessary abstraction too early
-- use Git as the source of truth
-- separate responsibilities across repositories
-- improve security incrementally
-- maintain a balance between realism, simplicity, and AWS cost control
+## Principes de conception
 
-## High-Level Architecture
+Le lab suit volontairement une approche pragmatique et progressive :
 
-At a high level, the platform works as follows:
+- garder l’architecture lisible
+- éviter l’abstraction inutile trop tôt
+- utiliser Git comme source de vérité
+- séparer clairement les responsabilités entre dépôts
+- améliorer la sécurité par étapes
+- conserver l’historique validé au lieu de le réécrire
+- maintenir un équilibre entre réalisme, simplicité et coût
 
-- AWS infrastructure is provisioned from the **infra repository**
-- the demo application is built and pushed to **Amazon ECR** from the **app repository**
-- the image tag is updated in the **GitOps repository**
-- **ArgoCD** reconciles Kubernetes state from Git into the EKS cluster
-- **Traefik** exposes the application
-- **cert-manager** obtains and renews TLS certificates from **Let's Encrypt**
-- **External Secrets Operator** pulls secrets from **AWS Secrets Manager** into Kubernetes
+## Architecture de haut niveau
 
-## Architecture Maturity Model
+Le fonctionnement global du lab est désormais le suivant :
 
-The lab architecture is documented through two complementary views.
+- le dépôt **infra** documente et a permis de valider la phase AWS
+- le dépôt **app** construit l’image de la demo-app et la publie dans le registre utilisé par la phase active
+- le dépôt **GitOps** contient l’état désiré Kubernetes
+- **ArgoCD** réconcilie cet état désiré dans le cluster actif
+- **Traefik** expose les applications
+- **cert-manager** gère l’obtention et le renouvellement des certificats **Let’s Encrypt**
+- **Kyverno** applique une première gouvernance non bloquante sur les workloads
 
-### Current Implemented Architecture
+## Modèle de maturité d’architecture
 
-This covers the components that are already provisioned, configured, deployed, and validated.
+Le lab doit être lu à travers trois vues complémentaires.
 
-### Target Platform Architecture
+### 1. Architecture validée
 
-This covers the next platform capabilities already identified in repository roadmaps, README files, and architecture direction, such as policy enforcement, stronger supply chain security, and additional platform guardrails.
+Elle couvre les composants réellement implémentés et validés durant la phase AWS.
 
-The objective is to make the architecture transparent: what is operational today is clearly separated from what is planned next.
+### 2. Architecture active
 
-## Main Repositories and Responsibilities
+Elle couvre la plateforme actuellement en fonctionnement sur K3s.
 
-### Infrastructure repository
-Owns AWS resources such as VPC, EKS, ECR, and IAM/OIDC components.
+### 3. Direction cible
 
-### Application repository
-Owns the demo application source code, container image build, and image publication workflow.
+Elle couvre les capacités identifiées comme prochaines étapes : stratégie de secrets adaptée à K3s, supply chain plus robuste, politiques plus larges, observabilité renforcée, runbooks plus riches.
 
-### GitOps repository
-Owns Kubernetes manifests, ArgoCD applications, ingress resources, and secret synchronization resources.
+## Responsabilités des dépôts
 
-### Documentation repository
-Owns diagrams, architecture documents, ADRs, and runbooks.
+### Dépôt infrastructure
 
-## Current State
+Porte la phase AWS validée : VPC, EKS, ECR, GitHub OIDC et stratégie de remote state Terraform.
 
-The platform currently includes:
+### Dépôt application
 
-- AWS VPC and networking
-- Amazon EKS cluster
-- Amazon ECR repository
-- GitHub Actions OIDC federation to AWS
-- ArgoCD bootstrap
-- demo application deployed through GitOps
-- Traefik ingress controller
-- cert-manager with Let's Encrypt production certificates
-- External Secrets Operator connected to AWS Secrets Manager through IRSA
+Porte le code de la demo-app, le Dockerfile, le pipeline CI et la publication de l’image.
 
-## Planned Evolution Themes
+### Dépôt GitOps
 
-The next architecture themes currently identified are:
+Porte les manifests Kubernetes, les applications ArgoCD, les overlays Kustomize, les ressources d’ingress, les policies Kyverno et les chemins de bootstrap.
 
-- policy enforcement with Kyverno
-- more advanced platform security controls
-- secure container supply chain improvements
-- broader governance and compliance guardrails
-- stronger operational documentation and runbooks
+### Dépôt documentation
 
-## Gap Analysis
+Porte la description d’architecture, les ADR et les runbooks.
 
-The lab already demonstrates a strong end-to-end delivery baseline, but it has not yet reached its full target platform scope.
+## État actif actuel
 
-Main gaps between the current state and the target direction include:
+La plateforme active comprend aujourd’hui :
 
-- admission control and policy governance are not yet implemented
-- secure container supply chain controls remain limited
-- platform security is progressing but not yet fully codified
-- documentation is being expanded to cover the whole architecture more thoroughly
-- operational maturity is improving, but runbooks and architecture visuals still need to be completed
+- un cluster K3s single-node sur VPS
+- un bootstrap ArgoCD dédié
+- le déploiement GitOps de la demo-app
+- Traefik
+- cert-manager et Let’s Encrypt
+- Kyverno avec policies initiales
+- un overlay `k3s-dev` pour la demo-app
+- une exposition publique TLS fonctionnelle
 
-## Next Steps
+## État validé historique
 
-The next logical platform steps are:
+La phase AWS validée comprenait :
 
-- document the full current architecture baseline
-- complete major diagrams for infrastructure and delivery flows
-- introduce Kyverno progressively
-- expand security and governance documentation
-- strengthen secure supply chain coverage over time
+- réseau AWS et VPC
+- cluster Amazon EKS
+- registre Amazon ECR
+- authentification GitHub Actions vers AWS par OIDC
+- External Secrets Operator
+- AWS Secrets Manager
+- IRSA
+- un chemin complet cloud de build, publication et déploiement
 
-## Source of Truth
+Cette phase reste centrale dans le projet car elle démontre de vraies compétences cloud.
 
-The architecture described here is based on the current content of:
+## Thèmes d’évolution
+
+Les prochaines grandes directions du lab sont :
+
+- réintroduire une gestion des secrets cohérente dans la phase K3s
+- élargir la couverture Kyverno
+- durcir progressivement la supply chain
+- enrichir les garde-fous de sécurité et les runbooks
+- mieux illustrer l’architecture et les flux
+
+## Écart entre état actif et cible
+
+Le lab possède déjà une base solide, mais certaines briques restent à compléter dans la phase active :
+
+- la gestion des secrets côté K3s n’est pas encore réintroduite
+- la couverture des policies reste volontairement limitée
+- la supply chain sécurisée est encore à un niveau de maturité intermédiaire
+- l’observabilité et l’exploitation peuvent être enrichies
+- d’autres garde-fous plateforme restent à mettre en place
+
+## Suite logique
+
+Les prochaines étapes les plus cohérentes sont :
+
+- documenter clairement la phase active K3s sans dévaloriser la phase AWS
+- définir un modèle de secrets stable pour K3s
+- élargir la gouvernance et le durcissement de sécurité
+- continuer à améliorer les runbooks et la narration d’architecture
+
+## Source de vérité
+
+Cette architecture s’appuie sur le contenu des dépôts :
 
 - `eks-devsecops-lab-infra`
 - `eks-devsecops-lab-app`
 - `eks-devsecops-lab-gitops`
 - `eks-devsecops-lab-docs`
 
-Whenever implementation and README text differ, implementation should be treated as the primary source of truth for the **current state**, while README and roadmap content should inform the **target direction**.
+En cas d’écart entre documentation et implémentation, l’implémentation doit être considérée comme la source de vérité pour l’état validé ou actif.

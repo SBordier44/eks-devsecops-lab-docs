@@ -1,213 +1,182 @@
-# Architecture Roadmap
+# Roadmap d’architecture
 
-## Purpose
+## Objectif
 
-This document tracks the evolution of the EKS DevSecOps Lab from its current validated baseline to its target platform direction.
+Ce document suit l’évolution du **EKS DevSecOps Lab** depuis sa base AWS validée jusqu’à son runtime actif K3s, puis vers sa prochaine trajectoire de maturité.
 
-Its goal is to distinguish clearly between:
-- what is already implemented and validated
-- what is planned next
-- what belongs to the broader target architecture vision
+Le but est de distinguer clairement :
 
-This distinction keeps the documentation transparent, professional, and useful for engineering review, operations, and portfolio presentation.
+- ce qui est déjà implémenté et validé
+- ce qui est actuellement actif
+- ce qui est planifié
+- ce qui reste simplement à l’étude
 
-## Delivery Model
+## Modèle de progression
 
-The lab evolves progressively. New capabilities are introduced one at a time, validated, and documented before moving to the next platform concern.
+Le lab évolue progressivement.
 
-This approach is intentional:
-- it keeps the platform understandable
-- it reduces unnecessary complexity
-- it preserves stability of the current baseline
-- it makes architecture decisions easier to explain and justify
+Les nouvelles capacités sont introduites une par une, validées, puis documentées avant de passer à la suivante.
 
-## Status Legend
+Cette approche est volontaire :
 
-- **Implemented**: deployed and validated in the lab
-- **In progress**: currently being implemented or documented
-- **Planned**: identified and expected in upcoming iterations
-- **Candidate**: under consideration, not yet committed
+- elle garde la plateforme compréhensible
+- elle réduit le risque de complexité inutile
+- elle préserve la stabilité
+- elle rend les choix d’architecture plus faciles à expliquer
+- elle garde le projet financièrement soutenable
 
-## Current Implemented Baseline
+## Légende
 
-The lab currently includes the following validated capabilities.
+- **Validé** : implémenté et validé dans le lab
+- **Actif** : actuellement utilisé par la plateforme en fonctionnement
+- **Planifié** : clairement identifié comme prochaine étape
+- **Candidat** : idée envisagée mais non encore engagée
 
-### Infrastructure Foundation
+## Socle validé
 
-Status: **Implemented**
+### Fondation infrastructure AWS
+Statut : **Validé**
 
-- AWS infrastructure provisioned with Terraform and Terragrunt
-- remote state management with S3 and DynamoDB
-- VPC and networking foundation
-- Amazon EKS cluster
-- Amazon ECR registry
-- GitHub OIDC federation to AWS
+- infrastructure AWS provisionnée avec Terraform et Terragrunt
+- remote state avec S3 et DynamoDB
+- VPC et réseau
+- cluster Amazon EKS
+- registre Amazon ECR
+- fédération GitHub OIDC vers AWS
 
-### Application Delivery
-
-Status: **Implemented**
-
-- demo application source repository
-- container image build pipeline
-- image publication to Amazon ECR
-- GitOps image update flow
-
-### GitOps Platform
-
-Status: **Implemented**
-
-- ArgoCD bootstrap
-- GitOps deployment model
-- demo application deployment through GitOps
-
-### Ingress and TLS
-
-Status: **Implemented**
-
-- Traefik ingress controller
-- cert-manager
-- Let's Encrypt production certificates
-- HTTPS exposure for the demo application
-
-### Secrets Management
-
-Status: **Implemented**
+### Intégration AWS-native des secrets
+Statut : **Validé**
 
 - External Secrets Operator
-- IRSA-based AWS access from Kubernetes
-- AWS Secrets Manager integration
-- ExternalSecret to Kubernetes Secret synchronization
+- accès AWS depuis Kubernetes via IRSA
+- AWS Secrets Manager
+- synchronisation d’`ExternalSecret` vers `Secret`
 
-### Platform Governance with Kyverno
+### Delivery GitOps sur AWS
+Statut : **Validé**
 
-Status: **Implemented**
+- bootstrap ArgoCD
+- déploiement de la demo-app via GitOps
+- Traefik
+- cert-manager
+- Let’s Encrypt
+- chemin complet build -> registre -> GitOps -> EKS
 
-- Kyverno deployment through GitOps and ArgoCD
-- dedicated ArgoCD application for Kyverno
-- dedicated ArgoCD application for Kyverno policies
-- first non-blocking `Audit` policies
-- initial policy scope limited to `demo-app-dev`
+## Socle actif
 
-### Current Documentation Baseline
+### Runtime plateforme
+Statut : **Actif**
 
-Status: **In progress**
+- cluster K3s single-node sur VPS
+- bootstrap ArgoCD pour le runtime actif
+- modèle GitOps actif
+- déploiement de la demo-app via GitOps
 
-The documentation repository now has a structured foundation with architecture, component, runbook, ADR, and roadmap sections.
+### Ingress et TLS
+Statut : **Actif**
 
-The next objective is to progressively document the entire lab architecture in a way that is both technically accurate and portfolio-grade.
+- Traefik
+- cert-manager
+- certificats Let’s Encrypt en production
+- exposition HTTPS de la demo-app sur le runtime K3s
 
-## Planned Next Capabilities
+### Delivery applicatif
+Statut : **Actif**
 
-### Broader Kyverno Governance
+- dépôt application
+- pipeline de build conteneur
+- publication d’image pour le runtime actif
+- mise à jour du dépôt GitOps
+- déploiement de l’overlay `k3s-dev`
 
-Status: **Planned**
+### Gouvernance plateforme avec Kyverno
+Statut : **Actif**
 
-Goal: Extend policy coverage progressively without destabilizing the current platform baseline.
+- déploiement de Kyverno via ArgoCD
+- application ArgoCD dédiée pour Kyverno
+- application ArgoCD dédiée pour les policies
+- premières policies en mode `Audit`
+- périmètre initial limité à `demo-app-dev`
 
-Expected scope:
-- broader namespace and workload coverage
-- additional audit-first policies
-- later progressive enforcement of selected controls
-- clearer policy layering between platform and workloads
+### Documentation
+Statut : **Actif**
 
-### Secure Container Supply Chain
+- documentation de la phase AWS validée
+- documentation de la phase K3s active
+- runbooks et ADR
+- narration de transition de plateforme
 
-Status: **Planned**
+## Prochaines capacités planifiées
 
-Goal: Strengthen the security posture of the application delivery pipeline and deployment chain.
+### Stratégie de secrets compatible K3s
+Statut : **Planifié**
 
-Expected themes:
-- stronger build security controls
-- image scanning improvements
-- signature and attestation strategy
-- policy-aware deployment controls
+Objectif : introduire une gestion des secrets stable sur le runtime actif sans réintroduire une complexité inutile.
 
-### Broader Platform Security Controls
+Périmètre attendu :
 
-Status: **Planned**
+- choix d’un modèle de source de secrets
+- implémentation runtime compatible K3s
+- documentation claire de la différence entre phase AWS validée et phase K3s active
 
-Goal: Increase platform maturity with additional guardrails and clearer security boundaries.
+### Gouvernance Kyverno élargie
+Statut : **Planifié**
 
-Expected themes:
-- stronger workload governance
-- additional Kubernetes policy controls
-- clearer runtime security expectations
-- more explicit platform hardening decisions
+Objectif : étendre progressivement la couverture de policies sans déstabiliser le socle.
 
-### Observability and Operations
+Périmètre attendu :
 
-Status: **Planned**
+- couverture de namespaces ou workloads plus large
+- policies supplémentaires en `Audit`
+- évolution progressive de certaines règles vers `Enforce`
+- meilleure structuration des layers de gouvernance
 
-Goal: Improve platform operability and troubleshooting depth.
+### Supply chain conteneur renforcée
+Statut : **Planifié**
 
-Expected themes:
-- richer runbooks
-- stronger troubleshooting workflows
-- broader operational guidance
-- more complete architecture views
+Objectif : renforcer la sécurité de la chaîne de build et de déploiement.
 
-## Candidate Future Topics
+Périmètre attendu :
 
-Status: **Candidate**
+- documentation plus forte de la sécurité image
+- SBOM
+- signature d’images
+- chaîne de confiance mieux formalisée
 
-These topics may become relevant later depending on the evolution of the lab:
-- advanced policy sets
-- stronger multi-environment design
-- broader compliance-oriented controls
-- more advanced platform team patterns
-- additional security automation layers
+### Sécurité plateforme et exploitation
+Statut : **Planifié**
 
-## Gap Analysis
+Objectif : faire monter la maturité générale de la plateforme.
 
-The lab already demonstrates a strong end-to-end baseline, but several gaps remain between the current validated platform and the target platform direction.
+Périmètre attendu :
 
-### Current Strengths
+- runbooks plus riches
+- observabilité plus poussée
+- meilleures capacités de diagnostic et reprise
+- garde-fous plateforme élargis
 
-- real AWS infrastructure as code
-- real GitOps workflow
-- real HTTPS exposure with automated certificates
-- real AWS-to-Kubernetes secret synchronization
-- real GitOps-managed policy engine deployment
-- initial non-blocking governance controls already validated
-- clear repository separation by responsibility
+## Candidats de plus long terme
 
-### Main Gaps
+### Multi-environnements plus riches
+Statut : **Candidat**
 
-- Kyverno scope is still intentionally narrow
-- only initial `Audit` policies are currently implemented
-- secure container supply chain is not yet documented as implemented
-- governance and policy layers are still limited
-- runbooks are not yet complete
-- several architecture documents still need to be written
+### Guardrails plus avancés
+Statut : **Candidat**
 
-## Near-Term Next Steps
+### Observabilité complète
+Statut : **Candidat**
 
-The next logical documentation and platform steps are:
-1. complete the architecture documentation baseline
-2. document the implemented Kyverno component and runbook
-3. keep the first Kyverno policies stable and understandable
-4. progressively add additional `Audit` policies only where they provide clear value
-5. document the future secure container supply chain direction explicitly as planned architecture
-6. expand the component-level and runbook-level documentation
+### Modèle secrets plus industrialisé
+Statut : **Candidat**
 
-## Documentation Rule
+## Résumé
 
-Every architecture document in this repository should, whenever relevant, distinguish between:
-- **Current state**
-- **Planned capabilities**
-- **Gap analysis**
-- **Next steps**
+Le lab ne raconte plus une histoire linéaire unique.  
+Il repose désormais sur :
 
-This rule ensures consistency across the whole documentation set.
+- une **phase AWS validée**
+- une **phase K3s active**
+- une **trajectoire de durcissement planifiée**
 
-## Relationship with Repository READMEs
-
-Some project repositories already describe future capabilities that are not yet fully implemented.
-
-This roadmap uses those elements as part of the **target platform direction**, while keeping the **implemented baseline** tied to validated, real platform behavior.
-
-## Summary
-
-The EKS DevSecOps Lab is intentionally evolving from a strong practical baseline toward a broader platform engineering target.
-
-The purpose of this roadmap is not only to plan future work, but also to show architectural maturity by making implementation status explicit and traceable.
+Ce découpage n’est pas une faiblesse.  
+C’est au contraire une des forces du projet, car il montre à la fois de la profondeur technique et une vraie capacité d’évolution d’architecture.

@@ -1,248 +1,165 @@
-# AWS Infrastructure with Terraform and Terragrunt
+# Infrastructure AWS avec Terraform et Terragrunt
 
-## Purpose
+## Objectif
 
-This document describes how the AWS infrastructure layer of the lab is designed and managed using Terraform and Terragrunt.
+Ce document décrit la couche infrastructure AWS du lab, conçue et gérée avec **Terraform** et **Terragrunt**.
 
-The main goals are:
+Même si le runtime actif du lab a ensuite été déplacé sur K3s, cette phase AWS reste une partie majeure du projet, car elle constitue une preuve concrète de conception et d’automatisation d’une plateforme cloud.
 
-- reproducibility
-- clarity of environment structure
-- modularity
-- cost control
-- secure access patterns
-- progressive evolution without over-engineering
+Les objectifs de cette couche étaient :
 
-## Why Terraform and Terragrunt
+- la reproductibilité
+- une structure d’environnements claire
+- la modularité
+- la maîtrise des coûts
+- des patterns d’accès sécurisés
+- une évolution progressive sans sur-ingénierie
 
-Terraform is used to define and provision AWS resources as code.
+## Pourquoi Terraform et Terragrunt
 
-Terragrunt is used to structure the live environment, centralize shared configuration, reduce duplication, and manage stack dependencies more cleanly.
+**Terraform** est utilisé pour définir et provisionner les ressources AWS en code.  
+**Terragrunt** est utilisé pour structurer le live, centraliser la configuration partagée, réduire la duplication et mieux gérer les dépendances entre stacks.
 
-This combination makes the infrastructure easier to maintain as the lab grows.
+Ce couple rend l’infrastructure plus maintenable à mesure que le lab grandit.
 
-## Repository Structure
+## Structure du dépôt
 
-The infrastructure repository is split into two major parts:
+Le dépôt infrastructure est découpé en deux grandes parties :
 
-- `modules/` for reusable Terraform modules
-- `live/dev/` for the concrete development environment
+- `modules/` pour les modules Terraform réutilisables
+- `live/dev/` pour l’environnement concret de développement
 
-Current live stacks include:
+Les stacks live comprennent :
 
 - `vpc`
 - `eks`
 - `ecr`
 - `github-oidc`
 
-## Environment Configuration
+## Configuration d’environnement
 
-The `live/dev/root.hcl` file centralizes key shared values:
+Le fichier `live/dev/root.hcl` centralise les valeurs partagées importantes :
 
-- environment: `dev`
-- region: `eu-west-3`
-- project: `eks-devsecops-lab`
+- environnement : `dev`
+- région : `eu-west-3`
+- projet : `eks-devsecops-lab`
 
-It also configures Terraform remote state with:
+Il configure également le remote state Terraform avec :
 
-- S3 bucket for Terraform state
-- DynamoDB table for Terraform locking
-- encryption enabled
+- un bucket S3 pour l’état Terraform
+- une table DynamoDB pour le verrouillage
+- le chiffrement activé
 
-This provides both state durability and locking protection during concurrent operations.
+Cette approche apporte durabilité de l’état et protection contre les exécutions concurrentes.
 
-## VPC Design
+## Conception du VPC
 
-The VPC stack provisions:
+La stack `vpc` provisionne :
 
-- a dedicated VPC
+- un VPC dédié
 - 2 Availability Zones
-- public subnets
-- private subnets
-- Internet Gateway
-- a single NAT Gateway
-- an S3 Gateway Endpoint
+- des subnets publics
+- des subnets privés
+- un Internet Gateway
+- un NAT Gateway unique
+- un endpoint S3 de type Gateway
 
-### Subnet Strategy
+### Stratégie de subnets
 
-The VPC layout is intentionally simple and Kubernetes-ready.
+Le layout réseau est volontairement simple et prêt pour Kubernetes.
 
-It provides a clean network foundation for:
+Il fournit une base claire pour :
 
-- worker nodes
-- public ingress exposure
-- private workloads
-- future platform growth
+- les worker nodes
+- l’exposition ingress publique
+- les workloads privés
+- la croissance future de la plateforme
 
-### Kubernetes Integration
+### Intégration Kubernetes
 
-Subnets are tagged to support Kubernetes load balancer integration and EKS networking expectations.
+Les subnets sont taggés pour faciliter l’intégration avec les load balancers Kubernetes et les attentes réseau d’EKS.
 
-### Cost Control Choice
+### Choix de coût
 
-The platform uses **one single NAT Gateway** instead of one NAT Gateway per Availability Zone.
+Le lab utilise **un seul NAT Gateway** au lieu d’un NAT par Availability Zone.
 
-This is a deliberate trade-off:
+C’est un compromis assumé :
 
-- lower AWS cost
-- simpler lab setup
-- lower resilience than a fully multi-AZ NAT design
+- coût AWS réduit
+- setup de lab plus simple
+- résilience inférieure à une architecture multi-AZ plus poussée
 
-### Endpoint Strategy
+### Stratégie d’endpoint
 
-S3 connectivity is optimized through a Gateway Endpoint.
+La connectivité S3 est optimisée avec un Gateway Endpoint, ce qui limite une partie du trafic traversant le NAT Gateway.
 
-This reduces part of the NAT-related traffic and fits the lab’s cost-aware design.
+## Conception du cluster EKS
 
-## EKS Cluster Design
+La stack `eks` provisionne :
 
-The EKS stack provisions:
+- un cluster dédié au lab
+- des nœuds managés
+- le support IRSA
+- les add-ons managés principaux
 
-- a dedicated cluster for the lab
-- managed worker nodes
-- IAM Roles for Service Accounts support
-- core managed add-ons
+### Philosophie du cluster
 
-### Cluster Philosophy
+Le design EKS vise à être :
 
-The EKS design aims to be:
+- suffisamment réaliste pour de la pratique platform engineering
+- suffisamment simple pour rester compréhensible
+- suffisamment abordable pour un lab personnel
 
-- realistic enough for platform engineering practice
-- simple enough to remain understandable
-- affordable enough to keep the lab sustainable
+### Capacités déjà supportées
 
-### Enabled Capabilities
-
-The infrastructure already supports:
+L’infrastructure prend déjà en charge :
 
 - IRSA
-- managed add-ons
-- GitOps deployment compatibility
-- future platform component integration
+- les managed add-ons
+- la compatibilité avec GitOps
+- l’intégration de composants plateforme
 
-### Logging and Cost Awareness
+### Logs et coût
 
-CloudWatch and control plane logging choices are intentionally conservative to keep the lab affordable while still allowing progressive observability improvements later.
+Les choix liés à CloudWatch et aux logs du control plane ont été volontairement conservateurs afin de garder un coût soutenable tout en laissant la porte ouverte à une observabilité plus poussée plus tard.
 
-## ECR Design
+## Conception d’ECR
 
-The ECR stack provisions the application image registry used by the demo application delivery pipeline.
+La stack `ecr` provisionne le registre utilisé par la chaîne de delivery de la demo-app pendant la phase AWS.
 
-Current characteristics include:
+Le fait que la phase active utilise ensuite GHCR ne retire rien à cette brique : elle a bien été conçue, déployée et validée dans un workflow complet.
 
-- immutable tags
-- image scanning on push
-- managed encryption
-- lifecycle policy support
+## GitHub OIDC
 
-### Why This Matters
+La stack `github-oidc` permet aux workflows GitHub Actions d’obtenir un accès AWS sans stocker de clés d’accès statiques.
 
-This provides a clean base for:
+Ce point est important car il démontre :
 
-- reproducible deployments
-- safer image management
-- progressive secure supply chain improvements
+- une intégration cloud-native correcte
+- une approche plus propre qu’un simple secret AWS long terme
+- une compréhension des patterns d’authentification CI/CD vers AWS
 
-## GitHub OIDC Federation Design
+## Ce que cette phase prouve
 
-The `github-oidc` stack establishes trust between GitHub Actions and AWS without storing long-lived AWS credentials in GitHub.
+La phase AWS ne doit pas être lue comme un simple brouillon abandonné.  
+Elle prouve concrètement :
 
-This is a key security design choice in the lab.
+- la capacité à concevoir une plateforme AWS cohérente
+- la capacité à l’automatiser avec Terraform et Terragrunt
+- la capacité à y brancher Kubernetes, GitOps et CI/CD
+- la capacité à gérer les compromis entre coût, clarté et réalisme
 
-### Current Benefits
+## Place de cette phase aujourd’hui
 
-This approach provides:
+Cette couche AWS n’est plus le runtime actif principal du lab, mais elle reste :
 
-- short-lived credentials
-- improved CI security posture
-- cleaner repository security model
-- better alignment with modern cloud delivery practices
+- validée
+- documentée
+- structurante dans le portfolio technique du projet
 
-### Current Usage
+La phase K3s ne remplace pas cette valeur. Elle permet simplement de prolonger le lab sans conserver un coût cloud permanent.
 
-OIDC is used to allow GitHub Actions workflows to interact with AWS services such as ECR and infrastructure-related resources.
+## Résumé
 
-## Dependency Model
-
-The Terragrunt live configuration defines dependencies between stacks so that infrastructure can be applied in a coherent order.
-
-This makes the environment easier to reason about and supports safer iterative changes.
-
-## Security Principles
-
-The infrastructure layer follows several important principles:
-
-- no long-lived AWS credentials stored in repositories
-- remote state protection and locking
-- least-privilege intent where possible
-- immutable image registry behavior
-- short-lived CI authentication with OIDC
-- IRSA readiness for Kubernetes-to-AWS access patterns
-
-## Cost and Simplicity Trade-Offs
-
-This lab is intentionally not designed as a full enterprise production platform.
-
-It favors a controlled balance between realism and affordability:
-
-- a small development-oriented footprint
-- simplified networking trade-offs
-- conservative log settings
-- one primary environment
-- progressive platform maturity instead of full upfront complexity
-
-## Current Strengths
-
-The current infrastructure design already demonstrates:
-
-- layered IaC organization
-- reusable Terraform modules
-- Terragrunt live environment management
-- secure CI-to-AWS authentication with OIDC
-- Kubernetes-ready network preparation
-- cost-aware AWS decisions
-- a strong foundation for future platform hardening
-
-## Planned Infrastructure Evolution
-
-The current infrastructure already provides a strong AWS foundation, but several platform and security topics are part of the target evolution.
-
-These include:
-
-- stronger IAM scoping and role separation
-- additional private connectivity patterns where relevant
-- more advanced policy and governance controls
-- future platform security services
-- stronger secure supply chain controls around image build, verification, and deployment
-
-These topics are intentionally documented as future evolution items rather than current implemented capabilities.
-
-## Gap Analysis
-
-The current infrastructure baseline is solid, but it does not yet fully cover all the ambitions described in the broader platform direction.
-
-Main gaps include:
-
-- infrastructure-level hardening can be pushed further
-- secure supply chain controls are still at an early maturity level
-- policy and governance controls are not yet fully introduced
-- future platform security integrations remain to be implemented
-- operational architecture documentation is still being expanded
-
-## Next Steps
-
-The next logical improvements for the infrastructure layer are:
-
-- complete architecture documentation for each AWS-related component
-- document the real Terragrunt dependency flow more explicitly
-- strengthen the narrative around security choices and trade-offs
-- support future Kyverno and platform governance integration
-- progressively document secure supply chain design decisions
-
-## Source of Truth
-
-This document is based on the current implementation in `eks-devsecops-lab-infra`.
-
-For the current state, implementation should be treated as the primary source of truth.
-
-For future direction, repository README files, roadmap elements, and upcoming architecture decisions should be used as complementary planning inputs.
+La couche AWS avec Terraform et Terragrunt constitue la **phase cloud validée** du lab.  
+Elle démontre un socle sérieux de compétences infrastructure, Kubernetes et intégration CI/CD, sur lequel la phase K3s vient ensuite s’appuyer comme continuation pragmatique.

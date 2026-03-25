@@ -1,162 +1,131 @@
-# Networking, Ingress, and TLS Architecture
+# Architecture réseau, ingress et TLS
 
-## Purpose
+## Objectif
 
-This document explains how application exposure works in the EKS DevSecOps Lab.
+Ce document explique comment l’exposition applicative fonctionne dans le lab.
 
-It covers:
+Il couvre :
 
-- the current networking baseline
-- ingress handling with Traefik
-- DNS integration with OVH
-- TLS automation with cert-manager and Let's Encrypt
-- the current implemented state and the next planned improvements
+- le socle réseau actif
+- la gestion de l’ingress avec Traefik
+- l’automatisation TLS avec cert-manager et Let’s Encrypt
+- le chemin d’exposition validé sur AWS
+- le chemin d’exposition actif sur K3s
 
-## Scope
+## Périmètre
 
-This document focuses on the application exposure path from the end user to the demo application.
+Ce document se concentre sur la chaîne d’exposition entre un utilisateur final et la demo-app.
 
-It does not attempt to document every AWS networking detail in depth. Those lower-level details belong primarily to the infrastructure documentation.
+Il ne cherche pas à documenter tous les détails bas niveau de l’infrastructure.
 
-## Current Exposure Model
+## Modèle d’exposition actif
 
-The demo application is exposed through Kubernetes ingress.
+La demo-app est actuellement exposée via Kubernetes ingress sur le runtime **K3s**.
 
-The current exposure chain is:
+Le chemin d’exposition actif est :
 
-1. the public DNS name resolves through OVH DNS
-2. traffic reaches the Kubernetes ingress layer
-3. Traefik routes the request to the demo application service
-4. TLS is managed by cert-manager with Let's Encrypt
+1. le nom DNS public pointe vers le VPS
+2. le trafic atteint la couche ingress Kubernetes
+3. **Traefik** route la requête vers le service applicatif
+4. **cert-manager** gère les certificats TLS avec **Let’s Encrypt**
 
-The public hostname currently used by the demo application is:
+Le hostname public actif est :
+
+- `srv712424.hstgr.cloud`
+
+## Modèle d’exposition AWS validé
+
+La phase AWS validée utilisait un chemin d’exposition différent :
+
+- DNS public
+- cluster EKS
+- Traefik
+- cert-manager
+- Let’s Encrypt
+
+Le hostname utilisé dans cette phase était :
 
 - `app-demo.sedecy-it.net`
 
-## Current Ingress Controller Choice
+Cette étape reste documentée comme une phase réelle du lab.
 
-The lab currently uses **Traefik** as the ingress controller.
+## Choix de Traefik
 
-This choice fits the current lab goals because it provides:
+Le lab utilise **Traefik** comme ingress controller.
 
-- a simple and modern ingress controller
-- easy integration with Kubernetes ingress resources
-- clean HTTPS routing support
-- a good balance between capability and operational simplicity
+Ce choix est cohérent avec les objectifs du projet :
 
-At the current maturity stage of the lab, Traefik is a pragmatic choice.
+- contrôleur ingress moderne et simple
+- intégration fluide avec les ressources `Ingress`
+- support clair du HTTPS
+- bon compromis entre fonctionnalités et complexité opérationnelle
 
-## Current Ingress Configuration
+## Configuration d’ingress active
 
-The demo application `dev` overlay defines an ingress resource that includes:
+L’overlay `k3s-dev` de la demo-app définit une ressource `Ingress` avec :
 
 - `ingressClassName: traefik`
-- routing to the `demo-app` service on port 80
-- TLS configuration for `app-demo.sedecy-it.net`
-- cert-manager annotation referencing the `letsencrypt-prod` ClusterIssuer
+- le routage vers le service `demo-app` sur le port 80
+- une configuration TLS pour `srv712424.hstgr.cloud`
+- une annotation cert-manager pointant vers `letsencrypt-prod`
 
-This means the ingress object is already the convergence point between:
-- routing
-- hostname exposure
-- certificate issuance
+L’ingress reste donc le point de convergence entre :
 
-## Current TLS Model
+- le routage
+- le hostname
+- l’émission du certificat
 
-TLS is currently automated through:
+## Modèle TLS
+
+Le TLS est automatisé par :
 
 - **cert-manager**
-- **Let's Encrypt**
-- a production `ClusterIssuer`
+- **Let’s Encrypt**
+- un `ClusterIssuer` de production
 
-The ingress resource references the production issuer through annotation and defines the TLS secret name used by the application host.
+C’est un point fort du lab, car cela prouve une vraie exposition publique HTTPS et non une simple démonstration locale ou auto-signée.
 
-This gives the lab a real HTTPS exposure model rather than a self-signed or manually managed certificate approach.
+## Pourquoi c’est important
 
-## Why This Matters
+Cette partie démontre :
 
-This is a strong portfolio point because it demonstrates:
+- une exposition DNS publique réelle
+- une automatisation de certificats réelle
+- un routage Kubernetes réel
+- une intégration pratique entre ingress, DNS et TLS
+- une continuité de l’exposition HTTPS malgré le changement de runtime
 
-- real public DNS exposure
-- real certificate automation
-- real Kubernetes ingress management
-- practical integration between ingress, DNS, and certificate automation
+## Forces actuelles
 
-It moves the lab beyond a purely internal Kubernetes demo.
+Le socle actuel démontre :
 
-## Current DNS Role
+- un hostname public actif
+- l’émission automatique de certificat
+- le routage Kubernetes via Traefik
+- l’intégration fonctionnelle avec cert-manager
+- une migration réussie du chemin public hors AWS
 
-OVH DNS is part of the current exposure chain.
+## Contraintes actuelles
 
-Its responsibility is to resolve the public hostname toward the public entrypoint serving the Kubernetes ingress layer.
+Le runtime reste volontairement simple :
 
-This makes DNS an external but essential dependency of the delivery platform.
+- un hostname public principal
+- un workload principal
+- pas de stratégie multi-ingress complexe
+- pas de segmentation avancée du trafic
 
-## Current cert-manager Role
+Ces contraintes sont acceptables à ce stade du lab.
 
-cert-manager is responsible for:
+## Évolutions prévues
 
-- requesting certificates
-- handling ACME interactions with Let's Encrypt
-- creating the TLS secret used by the ingress
-- renewing certificates automatically
+Plus tard, cette partie pourra être enrichie avec :
 
-This removes the need for manual certificate lifecycle management.
+- des runbooks DNS plus détaillés
+- du troubleshooting TLS plus riche
+- davantage de scénarios de validation réseau
+- une documentation réseau plateforme plus poussée
 
-## Current Strengths
+## Résumé
 
-The current networking and exposure baseline already demonstrates:
-
-- a real public hostname
-- automated TLS certificate issuance
-- Kubernetes-native ingress routing
-- a working integration between Traefik and cert-manager
-- a realistic end-user access path over HTTPS
-
-## Current Constraints
-
-The current implementation intentionally remains small in scope.
-
-Examples:
-- one main exposed application
-- one main hostname
-- a simple ingress model
-- no advanced traffic policies
-- no service mesh
-- no multi-environment public routing strategy yet
-
-This is appropriate for the current lab stage.
-
-## Planned Evolution
-
-The target platform direction may later include:
-
-- stronger ingress governance
-- additional platform-level routing guardrails
-- policy validation around ingress or TLS resources
-- more explicit security controls around public exposure
-
-At the moment, those remain planned topics rather than implemented capabilities.
-
-## Gap Analysis
-
-Main gaps between the current exposure baseline and the target platform direction include:
-
-- ingress governance is still minimal
-- no policy engine currently validates exposure patterns
-- operational runbooks for networking and TLS are still incomplete
-- architecture documentation is being expanded
-
-## Next Steps
-
-The next logical steps for this area are:
-
-1. document ingress and TLS troubleshooting as a runbook
-2. keep the current exposure path stable
-3. later introduce governance controls progressively
-4. document future policy expectations without complicating the current implementation too early
-
-## Summary
-
-The networking, ingress, and TLS layer is already one of the strongest parts of the lab baseline.
-
-It provides a real external access path, real HTTPS, and a good demonstration of Kubernetes platform integration on AWS, while remaining simple enough to understand and maintain.
+Le lab expose aujourd’hui sa demo-app via un chemin **K3s + Traefik + cert-manager + Let’s Encrypt** propre et fonctionnel.  
+La phase AWS reste une étape validée, mais le runtime public actif est désormais hébergé sur VPS.

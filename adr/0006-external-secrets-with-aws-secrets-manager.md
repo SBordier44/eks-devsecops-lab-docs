@@ -1,34 +1,35 @@
-# ADR-0006 External Secrets with AWS Secrets Manager
+# ADR 0006 - Utiliser External Secrets Operator avec AWS Secrets Manager
 
-## Context
-The platform needs a secret management model that avoids:
+## Statut
 
-- storing raw secret values in Git
-- managing AWS credentials manually inside workloads
-- hardcoding application secrets in Kubernetes manifests
+Accepté
 
-The solution needs to fit the current AWS and EKS environment while remaining understandable and progressive.
+## Contexte
 
-## Decision
-The platform uses:
+Le lab devait démontrer un modèle de gestion des secrets plus crédible que :
 
-- AWS Secrets Manager as the external secret source
-- External Secrets Operator inside Kubernetes
-- IRSA for Kubernetes-to-AWS authentication
+- des secrets en clair dans Git
+- des secrets manipulés manuellement dans Kubernetes
+- des credentials AWS statiques
 
-The current setup includes:
+## Décision
 
-- External Secrets CRDs
-- the operator deployment through ArgoCD
-- an AWS-backed ClusterSecretStore
-- an ExternalSecret in the demo application overlay
+Utiliser **External Secrets Operator** avec **AWS Secrets Manager** et **IRSA** dans la phase AWS.
 
-## Consequences
-This decision provides:
+## Conséquences
 
-- a more realistic cloud-native secret management model
-- no static AWS access keys in Kubernetes manifests for this integration
-- a clean separation between secret source, synchronization, and runtime consumption
-- a strong foundation for future policy and governance controls around secret usage
+### Positives
 
-It also confirms IRSA as an important platform capability of the lab.
+- modèle de secrets externalisé et réaliste
+- intégration propre avec AWS
+- pas de credentials AWS longue durée dans les pods
+
+### Négatives
+
+- dépendance forte au runtime AWS
+- modèle non réutilisable tel quel sur K3s sans adaptation
+
+## Remarque de phase 2
+
+Cette décision reste valide pour la phase AWS.  
+La phase K3s impose simplement de choisir un nouveau standard actif pour les secrets.

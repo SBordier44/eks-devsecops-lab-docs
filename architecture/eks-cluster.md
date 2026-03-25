@@ -1,160 +1,122 @@
-# EKS Cluster Architecture
+# Architecture du cluster EKS
 
-## Purpose
+## Objectif
 
-This document describes the current and target architecture of the Amazon EKS cluster used in the EKS DevSecOps Lab.
+Ce document décrit le design du cluster **Amazon EKS** utilisé pendant la phase cloud validée du lab.
 
-It explains:
+Même si le runtime actif a ensuite migré vers K3s, cette partie reste essentielle, car elle démontre la construction d’une plateforme Kubernetes cloud crédible, déployée et exploitée sur AWS.
 
-- how the cluster is provisioned
-- how the current node and addon model works
-- how the cluster supports GitOps and platform components
-- what is already implemented
-- what remains planned for later maturity stages
+## Rôle du cluster EKS
 
-## Current Cluster Identity
+Le cluster EKS servait de cible d’exécution principale pour la première phase du lab.
 
-The current development cluster is:
+Il hébergeait :
 
-- cluster name: `eksdsl-dev`
-- region: `eu-west-3`
-- Kubernetes version: `1.35`
+- ArgoCD
+- Traefik
+- cert-manager
+- la demo-app
+- External Secrets Operator
+- Kyverno
+- les ressources applicatives et plateforme gérées par GitOps
 
-This cluster is provisioned through the infrastructure repository using Terraform and Terragrunt.
+## Choix d’EKS
 
-## Current Provisioning Model
+EKS a été retenu pour plusieurs raisons :
 
-The cluster is provisioned from the `live/dev/eks` Terragrunt stack.
+- service managé Kubernetes largement utilisé
+- bonne intégration avec IAM et IRSA
+- compatibilité naturelle avec les patterns GitOps
+- très bon support des composants cloud-native
+- intérêt fort pour un portfolio DevOps / DevSecOps orienté AWS
 
-This stack depends on the VPC stack and consumes:
+## Principes de conception
 
-- the VPC ID
-- the private subnet IDs
+Le cluster a été conçu pour rester :
 
-This means the cluster is intentionally deployed into the private networking layer of the lab.
+- réaliste
+- compréhensible
+- exploitable
+- raisonnable en coût
 
-The infrastructure uses a reusable Terraform module based on the AWS EKS module.
+Le lab n’avait pas vocation à reproduire toute la complexité d’une plateforme multi-cluster d’entreprise, mais à construire une base sérieuse et cohérente.
 
-## Current API Endpoint Strategy
+## Structure du cluster
 
-The current cluster enables both:
+Le design EKS comprenait :
 
-- private API endpoint access
-- public API endpoint access
+- un cluster dédié au projet
+- un node group managé
+- un VPC préparé pour Kubernetes
+- des subnets publics et privés adaptés à l’exposition des services
+- les prérequis nécessaires à IRSA
 
-The current public access CIDR is open to `0.0.0.0/0`.
+## Add-ons et capacités
 
-This is functional and practical for a learning and portfolio lab, but it should be understood as a deliberate simplification rather than a hardened target-state configuration.
+Le cluster était conçu pour supporter :
 
-## Current Node Model
+- les add-ons managés EKS
+- l’ingress public via Traefik
+- la gestion automatique des certificats
+- la consommation de secrets depuis AWS Secrets Manager via ESO
+- les policies Kyverno en mode progressif
 
-The current cluster uses one EKS managed node group.
+## Intégration GitOps
 
-Current node group characteristics:
+Le cluster EKS était piloté par **ArgoCD**.
 
-- node group name pattern: `eksdsl-dev-workers`
-- instance type: `t3.medium`
-- desired size: `2`
-- minimum size: `2`
-- maximum size: `2`
-- AMI type: `AL2023_x86_64_STANDARD`
+Le dépôt GitOps décrivait l’état désiré du cluster, et ArgoCD assurait :
 
-This results in a small but stable baseline for platform experiments and GitOps-driven deployment.
+- la synchronisation automatique
+- le self-heal
+- le prune
+- la gestion déclarative des composants plateforme et applicatifs
 
-## Current Addon Model
+## Intégration réseau
 
-The current EKS module enables a focused set of managed addons:
+Le VPC et les subnets ont été taggés pour l’intégration avec les besoins réseau Kubernetes / EKS.  
+L’exposition des applications reposait ensuite sur Traefik et sur le DNS public du projet.
 
-- `coredns`
-- `kube-proxy`
-- `vpc-cni`
-- `eks-pod-identity-agent`
+## Intégration IAM / IRSA
 
-This is a clean baseline that keeps the cluster minimal while still preparing it for platform features and AWS integration patterns.
+Un point fort de cette phase a été l’utilisation de **IAM Roles for Service Accounts**.
 
-## Current IAM and AWS Integration
+Cela a permis d’éviter des credentials AWS statiques dans les pods et de donner à External Secrets Operator un accès propre à AWS Secrets Manager.
 
-The cluster has **IRSA** enabled.
+## Gestion des coûts
 
-This is an important architectural choice because it allows Kubernetes service accounts to access AWS services through IAM roles without static AWS credentials stored in workloads.
+Le cluster a été pensé pour rester crédible sans exploser le budget :
 
-This capability is already used in the lab for External Secrets Operator and AWS Secrets Manager integration.
+- architecture simple
+- nombre de nœuds raisonnable
+- NAT Gateway unique
+- logs du control plane gérés avec prudence
+- progression étape par étape
 
-## Current Role in the Platform
+## Limites assumées
 
-The cluster acts as the runtime target for the GitOps platform.
+Le cluster EKS du lab n’avait pas vocation à reproduire tous les mécanismes d’une plateforme entreprise complète.
 
-Its current responsibilities include:
+Par exemple :
 
-- hosting ArgoCD-managed workloads
-- running the demo application
-- running ingress and TLS components
-- running External Secrets Operator
-- receiving container images published to ECR through the GitOps flow
+- pas de multi-cluster
+- pas de stratégie avancée de DR
+- pas d’observabilité complète dès le départ
+- pas de politiques sécurité exhaustives immédiatement
 
-The cluster is therefore not just a raw Kubernetes environment. It is already the central runtime layer of the platform.
+Ces limites étaient volontaires afin de privilégier la progression maîtrisée.
 
-## Current Strengths
+## Place de cette phase aujourd’hui
 
-The current EKS design already demonstrates several strong engineering choices:
+Le cluster EKS n’est plus le runtime actif, mais cette phase ne perd pas sa valeur :
 
-- infrastructure as code provisioning
-- clean dependency on a dedicated VPC
-- managed node group usage
-- managed addons baseline
-- IRSA support
-- compatibility with GitOps and platform components
-- a pragmatic size and cost profile for a lab
+- elle prouve que la plateforme a bien existé sur AWS
+- elle prouve une intégration cloud réelle
+- elle prouve un vrai chemin complet du provisioning à l’exploitation GitOps
 
-## Current Constraints
+La phase K3s vient prolonger le projet, pas annuler ce qui a été fait.
 
-The current cluster remains intentionally limited in scope.
+## Résumé
 
-Examples:
-
-- one main development cluster
-- one node group
-- fixed size rather than autoscaling-focused behavior
-- public API exposure still permissive
-- no advanced governance layer yet
-- no multi-environment or multi-cluster strategy
-
-These constraints are aligned with the current objective of keeping the platform understandable and affordable.
-
-## Planned Evolution
-
-The target platform direction for the EKS layer includes:
-
-- stronger governance controls
-- Kyverno integration
-- clearer cluster security guardrails
-- more explicit operational runbooks
-- stronger linkage between supply chain and cluster policy decisions
-
-These items are part of the planned platform maturity path, not the current validated baseline.
-
-## Gap Analysis
-
-Main gaps between the current cluster baseline and the target direction include:
-
-- API exposure can be tightened further
-- policy governance is not yet introduced
-- workload guardrails are still limited
-- cluster operations are not yet fully documented through runbooks
-- the cluster architecture still needs richer component-level documentation
-
-## Next Steps
-
-The next logical steps for the EKS layer are:
-
-1. document the main cluster-related components individually
-2. document the operational lifecycle of the cluster
-3. introduce Kyverno progressively
-4. document future governance assumptions explicitly
-5. keep the current cluster stable while the platform documentation grows
-
-## Summary
-
-The current EKS cluster is a strong practical baseline for the lab.
-
-It is intentionally small and understandable, but already credible as a platform runtime foundation because it supports GitOps, ingress, TLS, and AWS-integrated secret management.
+Le cluster EKS du lab constitue une **phase cloud validée**, sérieuse et structurée.  
+Il représente la base AWS du projet et reste un élément fort de la démonstration technique globale.

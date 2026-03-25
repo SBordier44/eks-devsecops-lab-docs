@@ -1,32 +1,36 @@
-# ADR-0004 Traefik for Ingress
+# ADR 0004 - Utiliser Traefik pour l’ingress
 
-## Context
-The lab requires an ingress controller to expose Kubernetes services publicly over HTTP and HTTPS.
+## Statut
 
-The chosen solution needs to be:
+Accepté
 
-- simple to operate
-- Kubernetes-native
-- compatible with GitOps
-- suitable for a progressive lab without unnecessary complexity
+## Contexte
 
-## Decision
-Traefik is used as the ingress controller of the platform.
+Le lab avait besoin d’un contrôleur ingress :
 
-It is deployed through ArgoCD using the official Helm chart and is used as the current ingress class for the demo application.
+- simple
+- moderne
+- facile à intégrer
+- compatible avec un fonctionnement GitOps
 
-Traefik is integrated with:
+## Décision
 
-- Kubernetes ingress resources
-- cert-manager
-- the current public application exposure path
+Utiliser **Traefik** comme ingress controller principal.
 
-## Consequences
-This decision provides:
+## Conséquences
 
-- a modern and practical ingress layer
-- a simple integration path for public application exposure
-- a clean fit with the current GitOps model
-- good operational simplicity for the current maturity stage of the lab
+### Positives
 
-It also means that future ingress governance and policy controls will build on Traefik as the current public routing baseline.
+- bonne lisibilité
+- intégration fluide avec Kubernetes
+- bon support HTTPS avec cert-manager
+- continuité entre la phase AWS et la phase K3s
+
+### Négatives
+
+- moins standard dans certains environnements que d’autres alternatives
+- besoin de bien comprendre la logique d’exposition des services
+
+## Remarque de phase 2
+
+La continuité de Traefik entre EKS et K3s confirme que ce choix était robuste pour le projet.

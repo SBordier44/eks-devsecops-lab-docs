@@ -1,200 +1,148 @@
-# GitOps and ArgoCD Architecture
+# Architecture GitOps et ArgoCD
 
-## Purpose
+## Objectif
 
-This document describes how GitOps is implemented in the EKS DevSecOps Lab using ArgoCD.
+Ce document décrit la mise en œuvre de GitOps dans le lab avec **ArgoCD**.
 
-It explains:
+Il explique :
 
-- the current GitOps structure
-- how ArgoCD is bootstrapped
-- how applications and platform components are reconciled
-- how the application delivery pipeline interacts with the GitOps repository
-- what is already implemented versus what is planned next
+- la structure GitOps actuelle
+- le bootstrap ArgoCD
+- la réconciliation des composants plateforme et applicatifs
+- le lien entre le pipeline CI/CD et le dépôt GitOps
+- l’évolution du modèle GitOps entre la phase AWS et la phase K3s
 
-## Why GitOps
+## Pourquoi GitOps
 
-GitOps is used in this lab to make Kubernetes delivery:
+GitOps est utilisé pour rendre les déploiements Kubernetes :
 
-- declarative
-- traceable
-- reproducible
-- easier to review
-- easier to roll back
+- déclaratifs
+- traçables
+- reproductibles
+- auditables
+- plus simples à relire et à corriger
 
-Instead of deploying workloads directly from CI to the cluster, the desired Kubernetes state is stored in Git and reconciled by ArgoCD.
+Le principe est de ne pas déployer directement depuis le pipeline CI dans le cluster.  
+Le pipeline met à jour Git, puis **ArgoCD** réconcilie Git vers le cluster.
 
-This separation helps keep delivery workflows cleaner and closer to platform engineering practices used in real teams.
+## Rôle du dépôt GitOps
 
-## Current Repository Role
+Le dépôt `eks-devsecops-lab-gitops` est la source de vérité de l’état désiré Kubernetes.
 
-The `eks-devsecops-lab-gitops` repository is the source of truth for Kubernetes desired state.
+Il contient :
 
-It currently contains:
+- les ressources de bootstrap ArgoCD
+- les applications ArgoCD
+- les bases et overlays Kustomize
+- les manifests de la demo-app
+- les ressources Traefik
+- les ressources cert-manager
+- les `ClusterIssuer`
+- les ressources Kyverno
+- les chemins historiques AWS et le chemin actif K3s
 
-- ArgoCD bootstrap resources
-- ArgoCD applications
-- Kustomize bases and overlays
-- demo application manifests
-- Traefik deployment definition through ArgoCD
-- cert-manager deployment definition through ArgoCD
-- Let's Encrypt ClusterIssuer resources
-- External Secrets resources
+## Modèle de bootstrap
 
-## Current ArgoCD Bootstrap Model
+Le lab possède désormais **deux chemins de bootstrap importants**.
 
-The lab uses a root ArgoCD application.
+### Bootstrap AWS validé
 
-The bootstrap entry point is a single ArgoCD `Application` named `gitops-root`, pointing to the `argocd` directory of the GitOps repository.
+La phase AWS validée utilisait une application racine ArgoCD pointant vers `argocd/`.
 
-This means ArgoCD is configured to reconcile its own higher-level application definitions from Git.
+Ce chemin reste documenté, car il correspond à un état réel qui a été validé dans le cluster EKS.
 
-This creates a simple and understandable bootstrapping model:
-- bootstrap ArgoCD once
-- let ArgoCD manage the rest from the GitOps repository
+### Bootstrap K3s actif
 
-## Current ArgoCD Resource Layout
+La phase active utilise une application racine dédiée, pointant vers `argocd-k3s/`.
 
-The current `argocd/kustomization.yaml` assembles:
+Cela permet de poursuivre le lab sur K3s sans embarquer de dépendances runtime encore liées à AWS.
 
-- the `apps` project
-- the `demo-app-dev` application
-- the `traefik` application
-- the `cert-manager` application
-- Let's Encrypt staging and production issuers
-- External Secrets CRD application
-- External Secrets application
-- AWS ClusterSecretStore resource
+## Périmètre ArgoCD actif
 
-This shows that the current GitOps baseline already covers both:
-- workload deployment
-- selected platform services
+Le périmètre ArgoCD actif côté K3s comprend :
 
-## Current Application Model
+- le projet `apps`
+- Traefik
+- cert-manager
+- les `ClusterIssuer` staging et production
+- Kyverno
+- les policies Kyverno
+- l’application `demo-app-k3s-dev`
 
-The demo application is deployed through an ArgoCD `Application` called `demo-app-dev`.
+## Périmètre ArgoCD validé côté AWS
 
-That application points to:
+La phase AWS validée comprenait également :
 
-- repository: `eks-devsecops-lab-gitops`
-- path: `apps/demo-app/overlays/dev`
+- External Secrets CRDs
+- External Secrets Operator
+- le `ClusterSecretStore` AWS
+- le chemin de déploiement AWS de la demo-app
 
-This means the workload is deployed through a standard Kustomize overlay model.
+## Modèle applicatif
 
-## Current Kustomize Model
+La demo-app active est déployée via une application ArgoCD dédiée à K3s.
 
-The demo application uses:
+Le dépôt GitOps contient désormais :
 
-- a reusable `base`
-- a `dev` overlay
+- une `base` réutilisable
+- un overlay historique orienté AWS
+- un overlay actif `k3s-dev`
 
-The current `dev` overlay includes:
+Cette approche évite de casser la structure existante tout en gardant une séparation propre.
 
-- namespace definition
-- the base manifests
-- ingress definition
-- external secret definition
-- image override
-- environment label
+## Modèle Kustomize
 
-This is a simple and effective structure for the current lab scope.
+La `base` contient les ressources communes du workload.  
+L’overlay `k3s-dev` ajoute :
 
-## Current Delivery Flow
+- le namespace
+- l’ingress
+- l’override d’image
+- le label d’environnement
+- la compatibilité runtime K3s
 
-The current application delivery flow is the following:
+## Flux de delivery actif
 
-1. code is pushed to the application repository
-2. GitHub Actions builds the container image
-3. the image is pushed to Amazon ECR
-4. the workflow checks out the GitOps repository
-5. Kustomize updates the image reference in the `dev` overlay
-6. the workflow commits and pushes the GitOps change
-7. ArgoCD detects the Git change and reconciles the cluster state
+Le flux actif est le suivant :
 
-This means CI is responsible for publishing the artifact and updating desired state, while ArgoCD is responsible for cluster reconciliation.
+1. du code est poussé dans le dépôt application
+2. GitHub Actions construit l’image
+3. l’image est publiée dans le registre cible
+4. le dépôt GitOps est mis à jour avec le nouveau tag
+5. ArgoCD réconcilie cet état désiré dans K3s
+6. la nouvelle version de l’application est déployée
 
-## Why This Model Matters
+## Forces actuelles
 
-This delivery model keeps a clear separation between:
+Le modèle GitOps du lab démontre :
 
-- **build responsibility**
-- **deployment state responsibility**
-- **runtime reconciliation responsibility**
+- un vrai moteur de réconciliation
+- un bootstrap par application racine
+- la synchro automatique
+- le self-heal et le prune
+- la séparation claire entre CI et déploiement cluster
+- la continuité de la plateforme malgré le changement de runtime
 
-That separation is valuable because it:
+## Contraintes actuelles
 
-- makes change intent visible in Git
-- preserves traceability of deployed versions
-- reduces direct CI coupling to the cluster
-- aligns with GitOps operating principles
+L’implémentation reste volontairement simple :
 
-## Current Sync Strategy
+- un cluster actif principal
+- une application principale
+- pas d’architecture multi-cluster
+- pas d’ApplicationSet complexe
+- pas de stratégie active de secrets K3s encore réintroduite
 
-The current ArgoCD applications use automated synchronization with:
+## Évolutions prévues
 
-- pruning enabled
-- self-healing enabled
-- namespace creation enabled where relevant
+Les prochaines étapes GitOps / ArgoCD les plus logiques sont :
 
-This makes the platform capable of continuously reconciling drift back to the state declared in Git.
+- réintroduire une stratégie de secrets cohérente dans le runtime K3s
+- enrichir les runbooks de rollback et de troubleshooting
+- mieux documenter les patterns de promotion et de changement
+- élargir progressivement la gouvernance autour des composants plateforme
 
-## Current Strengths
+## Résumé
 
-The current GitOps implementation already demonstrates:
-
-- clear GitOps repository separation
-- root application bootstrap model
-- Kustomize-based workload customization
-- automated deployment reconciliation
-- platform service deployment through ArgoCD
-- a practical flow between CI and GitOps
-
-## Current Constraints
-
-The current GitOps model intentionally remains simple.
-
-Notable characteristics:
-- one main environment focus
-- one demo application
-- no advanced multi-cluster design
-- no complex ApplicationSet strategy
-- no broad governance layer yet
-
-This is deliberate and aligned with the lab principle of progressive implementation.
-
-## Planned Evolution
-
-The target GitOps direction includes:
-
-- Kyverno integration through GitOps
-- broader platform governance
-- more explicit policy layering
-- stronger secure supply chain controls
-- richer operational documentation around reconciliation and rollback
-
-These topics belong to the planned platform direction, not to the currently validated baseline.
-
-## Gap Analysis
-
-Main gaps between current GitOps maturity and target platform direction include:
-
-- governance controls are still limited
-- policy-driven enforcement is not yet in place
-- secure supply chain controls are still early
-- GitOps architecture documentation is still being expanded
-- runbooks for failure scenarios need to be enriched
-
-## Next Steps
-
-The next logical steps for this area are:
-
-1. fully document the current GitOps baseline
-2. add a dedicated runbook for ArgoCD operations and troubleshooting
-3. introduce Kyverno progressively through GitOps
-4. document future governance patterns without over-engineering the current setup
-
-## Summary
-
-The current GitOps implementation is intentionally simple, clean, and effective.
-
-It already proves a real delivery chain from source code to running workload through Git-driven reconciliation, while leaving room for progressive governance and security improvements in future iterations.
+ArgoCD est l’un des piliers du lab.  
+Il démontre un vrai fonctionnement GitOps et, surtout, la capacité de faire évoluer la cible d’exécution du projet sans perdre la discipline de delivery.

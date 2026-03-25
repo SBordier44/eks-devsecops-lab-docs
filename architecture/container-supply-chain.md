@@ -1,171 +1,93 @@
-# Container Supply Chain Architecture
+# Architecture de la supply chain conteneur
 
-## Purpose
+## Objectif
 
-This document describes the current and target container supply chain model of the EKS DevSecOps Lab.
+Ce document décrit la chaîne de fabrication, publication et déploiement des images de conteneurs utilisées par le lab.
 
-It explains:
+La supply chain n’est pas encore à son niveau de maturité cible, mais elle constitue déjà un axe central du projet.
 
-- what is already implemented in the build and delivery chain
-- how container images move from source code to Kubernetes
-- which security controls are already present
-- which supply chain controls are still planned
+## Ce que le lab démontre déjà
 
-## Why Container Supply Chain Matters
+Le lab démontre déjà une chaîne claire :
 
-A Kubernetes platform is only as trustworthy as the software delivery chain that feeds it.
+- build applicatif depuis le dépôt `eks-devsecops-lab-app`
+- construction d’une image conteneur
+- publication dans un registre
+- mise à jour du dépôt GitOps
+- déploiement réconcilié par ArgoCD
 
-For this lab, the container supply chain is treated as a progressive maturity topic rather than a fully solved problem from day one.
+Cette chaîne a existé et a été validée dans deux variantes :
 
-The objective is to show a realistic path from:
+- une variante **AWS** avec **Amazon ECR**
+- une variante **phase 2** avec un registre adapté au runtime actif
 
-- basic but clean container build and delivery
-  to
-- stronger security, verification, and governance controls over time
+## Phase AWS validée
 
-## Current Implemented Baseline
+Dans la phase cloud validée, la chaîne reposait sur :
 
-The current implemented supply chain already includes:
+- GitHub Actions
+- construction de l’image
+- publication vers **Amazon ECR**
+- mise à jour du dépôt GitOps
+- déploiement sur **EKS**
 
-- source code stored in GitHub
-- container image build through GitHub Actions
-- image publication to Amazon ECR
-- immutable image tags in ECR
-- scan on push enabled in ECR
-- GitOps-based image deployment update
-- workload deployment through ArgoCD
-- non-root final runtime image for the demo application
+Cette phase démontre déjà une supply chain cloud de bout en bout.
 
-This provides a real, working, and already credible baseline for a portfolio project.
+## Phase active K3s
 
-## Current Build Model
+Dans la phase active, le lab a été sorti du runtime AWS afin de continuer son évolution sur K3s.
 
-The demo application repository contains:
+La chaîne de delivery reste fondamentalement la même :
 
-- the application source code
-- a Dockerfile
-- a GitHub Actions workflow to build and push the image
+- GitHub Actions construit l’image
+- le registre cible de la phase active héberge l’image
+- le dépôt GitOps est mis à jour
+- ArgoCD déploie dans K3s
 
-The image build is triggered from GitHub Actions and published to Amazon ECR.
+Le registre actif retenu pour cette phase est **GHCR**.
 
-After the image is published, the pipeline updates the image reference in the GitOps repository so that ArgoCD can reconcile the new desired state.
+## Image applicative
 
-This means the current build chain already separates:
+La demo-app utilise une image construite de manière pragmatique et orientée sécurité :
 
-- source code ownership
-- artifact generation
-- deployment state management
-- runtime reconciliation
+- build multi-stage
+- image finale légère
+- exécution non-root
+- séparation claire entre build et runtime
 
-## Current Runtime Image Model
+Cela apporte déjà une base saine en matière de sécurité et d’empreinte runtime.
 
-The demo application uses a multi-stage container build.
+## Forces actuelles
 
-The current final image is based on a distroless non-root runtime image.
+La supply chain actuelle démontre :
 
-This is an important current security strength because it reduces the runtime attack surface and avoids running the application as root.
+- une séparation entre code source et état de déploiement
+- un pipeline CI lisible
+- une publication d’image dans un registre dédié
+- une propagation GitOps propre du changement
+- une continuité de delivery entre la phase AWS et la phase K3s
 
-## Current Registry Model
+## Limites actuelles
 
-Amazon ECR is the current container registry.
+La supply chain n’a pas encore atteint son état cible.
 
-The infrastructure already configures useful registry-side controls, including:
+Les points restant à renforcer incluent :
 
-- immutable tags
-- image scanning on push
-- encryption
-- lifecycle management
+- la production et l’exploitation d’un **SBOM**
+- la signature des images
+- une politique de vérification côté cluster
+- un storytelling de confiance plus complet entre build, registre et déploiement
 
-This means the registry is already more than a simple image storage endpoint.
+## Direction cible
 
-## Current Delivery Path
+L’orientation prévue pour le lab est de faire évoluer la supply chain vers quelque chose de plus robuste en matière de sécurité :
 
-The current end-to-end container flow is:
+- génération de SBOM
+- signature d’images
+- documentation plus claire de la chaîne de confiance
+- éventuelle intégration de contrôles d’admission liés à la provenance ou aux signatures
 
-1. source code is pushed to the application repository
-2. GitHub Actions builds the container image
-3. the image is pushed to Amazon ECR
-4. the GitOps repository is updated with the new image tag
-5. ArgoCD reconciles the Kubernetes desired state
-6. the new container image is deployed to the cluster
+## Résumé
 
-This already demonstrates a real CI to registry to GitOps to cluster chain.
-
-## Current Security Strengths
-
-The current supply chain already demonstrates several good practices:
-
-- no direct manual image deployment to the cluster
-- image publication through CI
-- immutable tags in the registry
-- registry-side scan on push
-- non-root runtime image
-- GitOps-based deployment updates
-- clear separation between build and deployment responsibilities
-
-## Current Constraints
-
-The current supply chain intentionally remains limited in scope.
-
-Examples:
-- one application pipeline
-- no signature verification yet
-- no attestations yet
-- no SBOM strategy formally documented yet
-- no admission policy enforcing image provenance yet
-- no broader promotion workflow across multiple environments yet
-
-This is acceptable for the current maturity stage of the lab.
-
-## Planned Evolution
-
-The target platform direction includes stronger container supply chain controls.
-
-Planned themes include:
-
-- stronger CI hardening
-- better vulnerability management across the build and runtime chain
-- image signature strategy
-- provenance and attestation strategy
-- policy-aware deployment controls
-- tighter relationship between supply chain status and cluster admission decisions
-
-These items are part of the target architecture, not the currently validated baseline.
-
-## Gap Analysis
-
-Main gaps between the current implemented supply chain and the target direction include:
-
-- no image signing process yet
-- no attestation or provenance workflow yet
-- no documented SBOM generation and usage model yet
-- no policy engine validating deployment provenance yet
-- no formal secure promotion flow across multiple stages yet
-
-## Why This Still Matters Today
-
-Even without the advanced controls already in place, the current supply chain remains a strong foundation because it already demonstrates:
-
-- infrastructure-backed registry design
-- CI-generated images
-- Git-driven deployment updates
-- Kubernetes reconciliation through ArgoCD
-- a realistic path for progressive hardening
-
-This is often more valuable than pretending a full enterprise-grade supply chain already exists.
-
-## Next Steps
-
-The next logical steps for this area are:
-
-1. document the current build and publish workflow in operational detail
-2. document the current ECR security controls more explicitly
-3. introduce the secure container supply chain as a planned architecture theme in ADRs
-4. later connect future policy enforcement with deployment governance
-5. progressively improve the maturity of artifact trust and verification
-
-## Summary
-
-The current container supply chain of the lab is already functional, credible, and aligned with a GitOps delivery model.
-
-It is not yet a fully hardened enterprise-grade chain, but it is intentionally positioned as a strong baseline with a clear path toward more advanced supply chain security capabilities.
+La supply chain du lab est déjà sérieuse et cohérente.  
+La phase AWS prouve le chemin cloud complet, et la phase K3s prouve que la chaîne de delivery peut continuer à vivre hors AWS sans perdre sa logique GitOps.

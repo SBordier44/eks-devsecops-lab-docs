@@ -1,149 +1,101 @@
-# Secrets Management Architecture
+# Architecture de gestion des secrets
 
-## Purpose
+## Objectif
 
-This document explains how secrets are managed in the EKS DevSecOps Lab.
+Ce document explique comment les secrets sont gérés dans le lab.
 
-It covers:
+Il couvre :
 
-- the current secret management model
-- the role of AWS Secrets Manager
-- the role of External Secrets Operator
-- the role of IRSA
-- how secrets are synchronized into Kubernetes
-- what is currently implemented versus what is planned next
+- le modèle validé dans la phase AWS
+- la position actuelle sur le runtime K3s
+- ce qui est déjà démontré et ce qui reste à définir
 
-## Why Secrets Management Matters
+## Pourquoi cette partie compte
 
-A realistic platform should avoid storing application secrets directly in Git or managing them manually inside Kubernetes whenever possible.
+Une plateforme réaliste doit éviter :
 
-The current lab uses a progressive but practical model:
+- de stocker des secrets applicatifs en clair dans Git
+- de gérer des valeurs sensibles manuellement dans Kubernetes
+- de distribuer des credentials longs termes dans les manifests
 
-- secret values are stored in AWS Secrets Manager
-- Kubernetes reads them through External Secrets Operator
-- AWS access from Kubernetes is granted through IRSA
-- the application consumes Kubernetes Secrets generated from external sources
+Le lab garde cette exigence, même si le runtime a évolué.
 
-This provides a better security and operations model than keeping sensitive values directly in manifests.
+## Modèle AWS validé
 
-## Current Implemented Model
+La phase AWS validée utilisait le flux suivant :
 
-The current secret flow is:
+1. un secret est stocké dans **AWS Secrets Manager**
+2. **External Secrets Operator** s’authentifie à AWS via **IRSA**
+3. un `ClusterSecretStore` définit la connexion au provider AWS
+4. un `ExternalSecret` définit quelles données synchroniser
+5. Kubernetes reçoit un `Secret` généré
+6. le workload consomme ce `Secret`
 
-1. a secret is stored in AWS Secrets Manager
-2. External Secrets Operator authenticates to AWS using IRSA
-3. a `ClusterSecretStore` defines the AWS provider connection
-4. an `ExternalSecret` defines which external secret data to synchronize
-5. Kubernetes receives a generated `Secret`
-6. the workload can consume that generated secret
+Ce modèle a été réellement implémenté et validé.
 
-This model is already implemented and validated in the lab.
+## Composants historiques de la phase AWS
 
-## Current Platform Components
+Le socle validé comprenait :
 
-The current implemented secret management baseline includes:
+- les CRDs External Secrets
+- le contrôleur External Secrets Operator
+- un `ClusterSecretStore` AWS
+- un `ExternalSecret` dans l’overlay applicatif
+- un rôle IAM dédié via IRSA
+- la synchronisation effective entre AWS Secrets Manager et Kubernetes
 
-- External Secrets CRDs installed through ArgoCD
-- External Secrets Operator deployed through ArgoCD
-- a dedicated AWS `ClusterSecretStore`
-- an `ExternalSecret` in the demo application overlay
-- AWS IAM role integration through IRSA
-- successful synchronization from AWS Secrets Manager to Kubernetes
+## Position actuelle sur K3s
 
-## Current IRSA Role
+Le runtime actif **K3s** ne réutilise pas actuellement le modèle AWS de gestion des secrets.
 
-IRSA is a key part of the design.
+C’est un choix volontaire.
 
-Its role is to let the External Secrets Kubernetes service account assume an AWS IAM role without using long-lived static AWS credentials stored in Kubernetes.
+La migration vers K3s a d’abord reconstruit le minimum stable :
 
-This provides:
-- short-lived credentials
-- better security posture
-- clearer access boundaries
-- a more realistic cloud-native AWS integration pattern
+- K3s
+- ArgoCD
+- Traefik
+- cert-manager
+- Kyverno
+- demo-app
 
-## Current Demo Application Example
+La gestion des secrets côté K3s n’a pas encore été réintroduite à ce stade.
 
-The current demo application `dev` overlay contains an `ExternalSecret` named `demo-app-secret`.
+## Pourquoi c’est acceptable
 
-That resource points to:
+Cette approche reste saine pour plusieurs raisons :
 
-- `ClusterSecretStore`: `aws-secretsmanager`
-- remote key: `eks-devsecops-lab/dev/demo-app`
-- property: `DEMO_MESSAGE`
+- les dépendances AWS-specific n’ont pas été copiées aveuglément
+- la base de plateforme a été stabilisée avant d’ajouter une nouvelle brique sensible
+- l’écart est explicite et documenté, pas caché
 
-This means the lab already includes a real, validated end-to-end secret synchronization path.
+## Ce que le lab démontre déjà malgré tout
 
-## Why This Design Was Chosen
+Même dans cet état transitoire, le lab démontre :
 
-This design was chosen because it is:
+- un vrai modèle externalisé de gestion de secrets dans la phase AWS
+- une séparation claire entre phase validée et phase active
+- une migration de runtime disciplinée
+- une capacité à documenter précisément ce qui reste à faire
 
-- simple enough for a progressive lab
-- realistic enough for platform engineering practice
-- safer than storing secret values in Git
-- compatible with the GitOps model already used in the lab
+## Contraintes actuelles
 
-The current model also keeps responsibilities clear:
+La phase active K3s a pour limites actuelles :
 
-- AWS owns the secret source
-- External Secrets owns synchronization
-- Kubernetes owns the runtime secret object
-- the application consumes the final secret
+- pas de synchronisation de secrets active encore en place
+- pas encore de backend de secrets retenu comme standard K3s
+- pas encore d’exemple applicatif actif consommant des secrets côté K3s
 
-## Current Strengths
+## Évolution prévue
 
-The current secrets baseline already demonstrates:
+La suite logique consiste à introduire une stratégie de secrets compatible K3s qui reste :
 
-- real external secret source integration
-- Kubernetes-to-AWS authentication with IRSA
-- secret synchronization without static AWS keys in manifests
-- a practical and modern Kubernetes secret management pattern
+- simple
+- compréhensible
+- compatible avec GitOps
+- cohérente avec la taille actuelle du lab
 
-## Current Constraints
+## Résumé
 
-The current implementation remains intentionally narrow in scope.
-
-Examples:
-- one main secret flow demonstrated
-- one operator-driven integration pattern
-- no broad secret governance yet
-- no advanced multi-tenant secret model
-- no deeper secret rotation narrative documented yet
-
-This is acceptable for the current maturity stage of the lab.
-
-## Planned Evolution
-
-The target platform direction may later include:
-
-- broader secret management documentation
-- stronger governance around secret usage
-- tighter policy controls on Kubernetes resource definitions
-- more explicit workload security expectations
-- stronger documentation around rotation and operational procedures
-
-Those topics belong to the planned architecture rather than the validated current baseline.
-
-## Gap Analysis
-
-Main gaps between the current implementation and the target platform direction include:
-
-- only a limited number of secret use cases are documented today
-- operational runbooks for troubleshooting and lifecycle management still need to be expanded
-- governance around secret consumption is still limited
-- policy-based controls are not yet introduced
-
-## Next Steps
-
-The next logical steps for this area are:
-
-1. add a dedicated troubleshooting runbook for External Secrets and IRSA
-2. document the exact validation and debugging workflow used during the lab
-3. later complement this area with policy and governance controls
-4. keep the current flow stable and understandable before adding more complexity
-
-## Summary
-
-The secret management layer is now a validated part of the platform baseline.
-
-It demonstrates a practical AWS-native and Kubernetes-native integration pattern that is both credible for a portfolio and useful as a real platform building block.
+La gestion des secrets est déjà une capacité **validée** du lab grâce à la phase AWS.  
+Ce qui reste ouvert n’est pas la capacité à faire proprement, mais le choix du modèle qui deviendra le standard actif de la phase K3s.

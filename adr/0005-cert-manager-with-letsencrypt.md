@@ -1,35 +1,31 @@
-# ADR-0005 cert-manager with Let's Encrypt
+# ADR 0005 - Utiliser cert-manager avec Let’s Encrypt
 
-## Context
-The lab requires real HTTPS exposure for public application access.
+## Statut
 
-Manual certificate management would add operational overhead and would not reflect modern Kubernetes platform practices.
+Accepté
 
-The solution needs to be:
+## Contexte
 
-- automated
-- Kubernetes-native
-- compatible with GitOps
-- realistic enough for a portfolio-grade platform
+Le lab devait démontrer une vraie exposition HTTPS, automatisée et réaliste.
 
-## Decision
-cert-manager is used for certificate lifecycle automation.
+## Décision
 
-Let's Encrypt is used as the certificate authority.
+Utiliser **cert-manager** avec **Let’s Encrypt** pour l’émission et le renouvellement automatique des certificats.
 
-The platform currently defines:
+## Conséquences
 
-- a staging ClusterIssuer
-- a production ClusterIssuer
+### Positives
 
-The demo application ingress references the production issuer and uses cert-manager-managed TLS secrets.
+- exposition HTTPS crédible
+- automatisation complète du TLS
+- bonne intégration avec Traefik
+- continuité entre AWS et K3s
 
-## Consequences
-This decision provides:
+### Négatives
 
-- automated certificate issuance and renewal
-- a real public HTTPS exposure model
-- reduced manual certificate management effort
-- a stronger and more realistic runtime baseline for the lab
+- dépendance au DNS et à la joignabilité publique
+- nécessité de diagnostiquer les challenges HTTP-01 en cas d’erreur
 
-It also creates a clean foundation for future ingress and TLS governance controls.
+## Remarque de phase 2
+
+Le fait d’avoir pu conserver la même logique TLS lors du passage sur K3s renforce la solidité de cette décision.

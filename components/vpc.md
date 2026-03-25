@@ -1,147 +1,64 @@
-# VPC Component
+# Composant VPC
 
-## Purpose
+## Objectif
 
-This document describes the VPC component of the EKS DevSecOps Lab.
+Ce document décrit le composant **VPC** utilisé dans la phase AWS validée du lab.
 
-It explains:
+Le VPC constitue la fondation réseau de la plateforme cloud. Même si le runtime actif se trouve désormais sur K3s, cette brique reste importante car elle démontre la capacité à construire une base AWS propre pour Kubernetes.
 
-- the current VPC design
-- how the subnet layout is built
-- how the VPC supports EKS and public application exposure
-- what is implemented today
-- what remains planned for future improvements
+## Rôle du composant
 
-## Current Role
+Le VPC fournit :
 
-The VPC is the foundational networking component of the lab.
+- l’isolation réseau du lab
+- les subnets nécessaires au cluster EKS
+- la connectivité Internet
+- le support réseau pour l’exposition des workloads
+- la base réseau pour les futures intégrations plateforme
 
-Its role is to provide:
+## Éléments provisionnés
 
-- a dedicated AWS network boundary
-- public and private subnets
-- Internet and outbound connectivity
-- subnet tagging compatible with Kubernetes load balancer behavior
-- a clean base for EKS and related platform services
+Le VPC du lab comprenait :
 
-## Current Configuration
-
-The current development VPC is provisioned from the `live/dev/vpc` Terragrunt stack.
-
-Current characteristics include:
-
-- VPC CIDR: `10.0.0.0/16`
+- un VPC dédié
 - 2 Availability Zones
-- public subnets
-- private subnets
-- Internet Gateway
-- one NAT Gateway
-- S3 Gateway Endpoint enabled
-- interface VPC endpoints disabled in the current live configuration
+- des subnets publics
+- des subnets privés
+- un Internet Gateway
+- un NAT Gateway unique
+- un endpoint S3 Gateway
 
-## Current Subnet Strategy
+## Choix de conception
 
-The VPC module derives subnet ranges from the `/16` VPC CIDR.
+Le design réseau a été volontairement gardé lisible :
 
-The current design creates:
+- assez réaliste pour un lab cloud crédible
+- assez simple pour rester compréhensible
+- assez léger pour rester soutenable financièrement
 
-- public `/20` subnets
-- private `/20` subnets
+## Subnets et intégration Kubernetes
 
-The layout is intentionally simple and easy to understand.
+Les subnets ont été préparés pour le fonctionnement d’EKS et pour l’intégration avec les mécanismes d’exposition réseau attendus côté Kubernetes.
 
-This is sufficient for the current lab while still being realistic enough for Kubernetes platform work.
+Les tags de subnets ont permis une bonne intégration avec les besoins du cluster et des load balancers.
 
-## Current Kubernetes Integration
+## Choix de coût
 
-The VPC subnets are tagged for Kubernetes integration.
+Le recours à un seul NAT Gateway est un compromis assumé :
 
-Public subnets are tagged for external load balancer usage.
+- coût plus faible
+- architecture plus simple
+- résilience inférieure à un NAT par AZ
 
-Private subnets are tagged for internal load balancer usage.
+Ce choix est cohérent avec la philosophie générale du lab.
 
-This means the VPC is already prepared for standard Kubernetes and EKS networking behavior.
+## Place du composant aujourd’hui
 
-## Current Connectivity Model
+Le composant VPC n’est plus utilisé par le runtime actif K3s, mais il reste pleinement valide comme partie de la phase AWS du projet.
 
-The current networking model is intentionally pragmatic.
+Il témoigne d’une base réseau cloud réelle et non d’une simple démonstration locale.
 
-It provides:
+## Résumé
 
-- inbound public reachability through public networking paths
-- outbound Internet access through a single NAT Gateway
-- reduced S3-related NAT dependency through the S3 Gateway Endpoint
-
-This keeps the design relatively cost-aware while still supporting the current platform scope.
-
-## Current Security and Simplicity Trade-Off
-
-The VPC design uses a **single NAT Gateway**.
-
-This is a deliberate lab trade-off:
-
-- lower AWS cost
-- simpler setup
-- lower resilience than a full NAT-per-AZ production-grade design
-
-This choice is acceptable for the current stage of the lab and should be understood as intentional rather than accidental.
-
-## Current Strengths
-
-The current VPC baseline already demonstrates:
-
-- infrastructure as code network provisioning
-- clean separation of public and private networking
-- Kubernetes-compatible subnet tagging
-- realistic multi-AZ layout
-- cost-aware endpoint strategy
-- a good base for EKS and public application exposure
-
-## Current Constraints
-
-The current VPC remains intentionally limited in scope.
-
-Examples:
-
-- one environment-centric layout
-- no private interface endpoints enabled yet
-- one NAT Gateway only
-- no advanced network segmentation strategy
-- no network policy layer documented here
-
-These constraints are aligned with the lab principle of progressive implementation.
-
-## Planned Evolution
-
-Future networking evolution may include:
-
-- additional private interface endpoints
-- stronger cost versus security trade-off documentation
-- richer governance around workload exposure patterns
-- more explicit documentation of ingress-related network assumptions
-
-These topics are currently part of the broader target architecture rather than the implemented baseline.
-
-## Gap Analysis
-
-Main gaps between the current VPC baseline and the target platform direction include:
-
-- interface VPC endpoints are not yet enabled in the current environment
-- the lab does not yet document advanced network isolation strategies
-- networking runbooks are still limited
-- platform-level governance over network exposure is not yet introduced
-
-## Next Steps
-
-The next logical steps for the VPC area are:
-
-1. document how the VPC supports EKS and ingress more explicitly
-2. document Terraform and Terragrunt operational workflows for networking changes
-3. later revisit endpoint strategy when platform maturity increases
-4. keep the current VPC baseline stable and well documented
-
-## Summary
-
-The VPC component is a strong, pragmatic, and Kubernetes-ready network foundation for the lab.
-
-It balances simplicity, clarity, and affordability while still providing a realistic AWS base for the platform.
+Le VPC est la fondation réseau de la phase AWS validée.  
+Il reste un composant important dans la valeur globale du lab.

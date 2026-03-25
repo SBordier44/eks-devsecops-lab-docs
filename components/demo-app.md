@@ -1,177 +1,98 @@
-# Demo Application Component
+# Composant demo-app
 
-## Purpose
+## Objectif
 
-This document describes the demo application component of the EKS DevSecOps Lab.
+Ce document décrit la **demo-app** du lab.
 
-It explains:
+Elle ne cherche pas à démontrer une logique métier complexe.  
+Son rôle principal est de valider la plateforme de bout en bout.
 
-- the role of the demo application in the platform
-- how it is built and deployed
-- how it integrates with the GitOps model
-- how it validates the current platform baseline
-- what remains planned for future maturity
+## Rôle actuel
 
-## Current Role
+La demo-app sert de workload de référence pour vérifier :
 
-The demo application is the reference workload of the lab.
+- le build d’image
+- la publication dans le registre
+- la mise à jour GitOps
+- le déploiement ArgoCD
+- l’exposition via ingress
+- le TLS
+- la gouvernance Kyverno
 
-Its role is not to demonstrate business complexity. Its role is to validate the platform end to end.
+## Modèle applicatif
 
-It currently serves as the practical test workload for:
+L’application est volontairement minimale.
 
-- container image build and publication
-- GitOps-driven deployment
-- ingress exposure
-- TLS automation
-- secret synchronization from AWS Secrets Manager
-- Kubernetes runtime validation
+Elle expose des endpoints simples, suffisants pour tester :
 
-The demo application is therefore a platform validation workload first, and an application sample second.
+- la disponibilité
+- le déploiement
+- le routage
+- la santé de la plateforme
 
-## Current Application Model
+## Modèle conteneur
 
-The application repository contains a minimal Go application.
+L’application utilise un build multi-stage et une image runtime légère avec exécution non-root.
 
-The current application exposes:
+C’est un point important du projet car cela démontre une base saine côté image.
 
-- a root endpoint
-- a health endpoint
+## Flux de delivery actif
 
-This is intentionally simple.
+Le flux actif est le suivant :
 
-The goal is to keep the application understandable and stable so that the focus remains on the platform architecture and delivery chain.
+1. push de code dans le dépôt application
+2. build de l’image par GitHub Actions
+3. publication dans le registre utilisé par la phase active
+4. mise à jour du dépôt GitOps
+5. déploiement sur K3s via ArgoCD
 
-## Current Container Model
+## Flux validé historique
 
-The application uses a multi-stage Docker build.
+La phase AWS utilisait le même principe général, mais avec :
 
-The final runtime image is based on a distroless non-root image.
+- un registre ECR
+- un runtime EKS
 
-This is an important current strength because it demonstrates:
+Cette partie reste pleinement valide.
 
-- a cleaner runtime image
-- reduced attack surface
-- non-root execution
-- a more realistic container security baseline
+## Déploiement Kubernetes
 
-## Current Delivery Model
+La demo-app est déployée via le dépôt GitOps avec Kustomize.
 
-The application delivery flow is currently the following:
+Le modèle comprend :
 
-1. code is pushed to the application repository
-2. GitHub Actions builds the container image
-3. the image is pushed to Amazon ECR
-4. the GitOps repository is updated with the new image tag
-5. ArgoCD reconciles the desired state into the cluster
-6. the new version of the application is deployed
+- une `base` commune
+- un overlay historique orienté AWS
+- un overlay actif `k3s-dev`
 
-This gives the demo application a real CI to registry to GitOps to cluster delivery path.
+L’overlay `k3s-dev` gère notamment :
 
-## Current Kubernetes Deployment Model
+- le namespace
+- l’ingress
+- le hostname actif
+- l’override d’image
+- les labels d’environnement
 
-The application is deployed through the GitOps repository using Kustomize.
+## Exposition active
 
-The current model includes:
-
-- a reusable base
-- a `dev` overlay
-
-The `dev` overlay currently defines:
-
-- the namespace
-- the application ingress
-- the image override pointing to Amazon ECR
-- the ExternalSecret integration
-- the environment label
-
-This keeps the application deployment simple and understandable while still demonstrating real GitOps layering.
-
-## Current Exposure Model
-
-The demo application is currently exposed publicly through:
+La demo-app est actuellement exposée publiquement en HTTPS via :
 
 - Traefik
 - cert-manager
-- Let's Encrypt
-- OVH DNS
+- Let’s Encrypt
+- le runtime K3s
 
-The current public hostname is:
+Hostname actif :
 
-- `app-demo.sedecy-it.net`
+- `srv712424.hstgr.cloud`
 
-This means the application is already part of a real HTTPS delivery path.
+## Gestion des secrets
 
-## Current Secret Consumption Model
+La phase AWS validée comportait un `ExternalSecret` pour la demo-app.
 
-The application overlay includes an `ExternalSecret` resource that allows secret synchronization from AWS Secrets Manager into Kubernetes.
+La phase K3s active n’a pas encore réintroduit cette brique, ce qui est assumé et documenté comme prochaine étape.
 
-This demonstrates that the application is already part of the current secrets management baseline.
+## Résumé
 
-The current secret integration validates:
-
-- IRSA
-- External Secrets Operator
-- AWS Secrets Manager connectivity
-- synchronization into Kubernetes Secrets
-
-## Current Strengths
-
-The demo application already demonstrates:
-
-- clean separation from infrastructure code
-- CI-driven image build
-- ECR-based image distribution
-- GitOps-based deployment updates
-- public HTTPS exposure
-- secret synchronization integration
-- a practical workload for validating platform components
-
-## Current Constraints
-
-The current demo application is intentionally minimal.
-
-Examples:
-
-- very small feature set
-- one main deployment overlay
-- no broader business logic scope
-- no advanced application-level observability model documented yet
-- no multi-service architecture
-
-These constraints are intentional because the lab is focused on platform engineering rather than application complexity.
-
-## Planned Evolution
-
-The target direction for the demo application component may include:
-
-- richer examples of secret consumption
-- stronger application-level operational documentation
-- future alignment with additional governance controls
-- support for future policy validation scenarios
-
-These items belong to future platform maturity rather than the validated current baseline.
-
-## Gap Analysis
-
-Main gaps between the current demo application baseline and the target direction include:
-
-- the workload remains intentionally simple
-- application-level operational documentation can be expanded
-- broader policy-driven validation is not yet in place
-- the application is currently more a platform validation workload than a richer service example
-
-## Next Steps
-
-The next logical steps for the demo application component are:
-
-1. document the deployment and validation flow more explicitly in runbooks
-2. keep the current workload stable as a platform validation target
-3. later use the application as a test subject for future governance controls
-4. expand documentation of secret consumption patterns if needed
-
-## Summary
-
-The demo application is a deliberately simple but strategically important component of the lab.
-
-It already validates a significant part of the platform baseline and serves as the current reference workload for GitOps, ingress, TLS, and secret management.
+La demo-app est volontairement simple, mais stratégiquement essentielle.  
+Elle prouve la plateforme de bout en bout, aussi bien dans la phase AWS validée que dans la phase K3s active.
