@@ -2,28 +2,29 @@
 
 ## Objectif
 
-Ce document décrit la chaîne de fabrication, publication et déploiement des images de conteneurs utilisées par le lab.
+Ce document décrit la chaîne de fabrication, de contrôle, de publication et de déploiement des images de conteneurs utilisées par le lab.
 
-La supply chain n’est pas encore à son niveau de maturité cible, mais elle constitue déjà un axe central du projet.
+Il couvre l’état réellement validé de la supply chain applicative, d’abord sur AWS puis dans la phase K3s active.
 
-## Ce que le lab démontre déjà
+## Vue d’ensemble
 
-Le lab démontre déjà une chaîne claire :
+La supply chain du lab repose sur une séparation nette entre :
 
-- build applicatif depuis le dépôt `eks-devsecops-lab-app`
-- construction d’une image conteneur
-- publication dans un registre
-- mise à jour du dépôt GitOps
-- déploiement réconcilié par ArgoCD
+- le dépôt applicatif
+- le pipeline CI/CD
+- le registre d’images
+- le dépôt GitOps
+- le cluster cible
 
-Cette chaîne a existé et a été validée dans deux variantes :
-
-- une variante **AWS** avec **Amazon ECR**
-- une variante **phase 2** avec un registre adapté au runtime actif
+Le dépôt applicatif produit l’image.  
+Le pipeline la contrôle et la signe.  
+Le dépôt GitOps déclare l’état voulu.  
+ArgoCD réconcilie cet état vers le cluster.  
+Kyverno applique ensuite une vérification complémentaire côté admission.
 
 ## Phase AWS validée
 
-Dans la phase cloud validée, la chaîne reposait sur :
+La première variante validée du lab reposait sur :
 
 - GitHub Actions
 - construction de l’image
@@ -31,63 +32,129 @@ Dans la phase cloud validée, la chaîne reposait sur :
 - mise à jour du dépôt GitOps
 - déploiement sur **EKS**
 
-Cette phase démontre déjà une supply chain cloud de bout en bout.
+Cette phase reste une preuve valable de chaîne cloud de bout en bout.
 
-## Phase active K3s
+## Phase K3s active
 
-Dans la phase active, le lab a été sorti du runtime AWS afin de continuer son évolution sur K3s.
+La phase active conserve la même logique générale, mais avec un runtime et un registre différents :
 
-La chaîne de delivery reste fondamentalement la même :
+- le pipeline GitHub Actions construit l’image
+- l’image est publiée sur **GHCR**
+- le dépôt GitOps est mis à jour sur l’overlay `apps/demo-app/overlays/k3s-dev`
+- ArgoCD déploie la demo-app sur **K3s**
+- Kyverno applique une policy `verifyImages` sur la charge ciblée
 
-- GitHub Actions construit l’image
-- le registre cible de la phase active héberge l’image
-- le dépôt GitOps est mis à jour
-- ArgoCD déploie dans K3s
+## Contrôles actuellement en place
 
-Le registre actif retenu pour cette phase est **GHCR**.
+Dans l’état actuellement validé, le pipeline applicatif réalise :
 
-## Image applicative
+- le build de l’image
+- un scan Trivy bloquant sur les vulnérabilités `HIGH` et `CRITICAL`
+- l’upload du résultat SARIF vers GitHub Security
+- la génération d’un **SBOM CycloneDX**
+- la signature **Cosign keyless**
+- une vérification **Cosign** de l’image publiée
+- la mise à jour du dépôt GitOps
 
-La demo-app utilise une image construite de manière pragmatique et orientée sécurité :
+Côté cluster, le dépôt GitOps déclare :
 
-- build multi-stage
-- image finale légère
-- exécution non-root
-- séparation claire entre build et runtime
+- deux policies Kyverno de conformité workload en `Enforce`
+- une policy Kyverno `verifyImages` en `Audit` pour la demo-app
 
-Cela apporte déjà une base saine en matière de sécurité et d’empreinte runtime.
+## Chaîne active détaillée
 
-## Forces actuelles
+Dans la phase K3s active, la chaîne se déroule ainsi :
 
-La supply chain actuelle démontre :
+1. un commit sur le dépôt applicatif déclenche le pipeline
+2. l’image est construite et poussée sur **GHCR**
+3. Trivy génère un **SBOM CycloneDX**
+4. Trivy exécute un scan bloquant et publie un **SARIF**
+5. Cosign signe l’image publiée en mode keyless
+6. Cosign vérifie cette image sur son digest
+7. le dépôt GitOps est mis à jour pour l’overlay `k3s-dev`
+8. ArgoCD réconcilie l’état vers K3s
+9. Kyverno vérifie la signature attendue à l’admission sur le périmètre ciblé
 
-- une séparation entre code source et état de déploiement
-- un pipeline CI lisible
-- une publication d’image dans un registre dédié
-- une propagation GitOps propre du changement
-- une continuité de delivery entre la phase AWS et la phase K3s
+## Chaîne de confiance actuelle
+
+La chaîne de confiance démontrée par le lab n’est plus limitée au simple build et au push d’image.
+
+Elle couvre désormais :
+
+- le contrôle de sécurité pendant le pipeline
+- la traçabilité de l’image publiée
+- la signature de l’image
+- la vérification explicite de cette signature dans la CI
+- une vérification complémentaire côté cluster via Kyverno
+
+Cela constitue déjà une supply chain crédible, progressive et réellement démontrée.
+
+## Contrainte technique connue : compatibilité Cosign / Kyverno
+
+Un retour d’expérience important a été observé pendant la mise en place de la vérification de signature.
+
+### Symptôme observé
+
+Avec une version plus récente de Cosign que celle finalement retenue, la chaîne de vérification ne se comportait plus comme attendu et l’erreur rencontrée était de type :
+
+```text
+no signatures found
+```
+
+### Décision retenue
+
+Dans l’état validé du lab, la version de Cosign est donc volontairement **pinnée** sur une version compatible.
+
+Cette décision est assumée, car elle permet de :
+
+- préserver une chaîne de confiance réellement fonctionnelle
+- éviter une régression silencieuse côté vérification
+- documenter une contrainte observée en conditions réelles
+
+### Règle de gestion
+
+Le lab ne met pas à jour Cosign uniquement pour suivre la dernière version disponible.
+
+Toute évolution future de version doit être précédée d’une revalidation bout en bout incluant au minimum :
+
+1. signature réussie en CI
+2. vérification Cosign réussie
+3. admission Kubernetes correcte pour une image signée valide
+4. refus ou écart attendu pour une image non signée ou invalide
+5. contrôle explicite des logs et événements Kyverno
 
 ## Limites actuelles
 
-La supply chain n’a pas encore atteint son état cible.
+La supply chain est déjà sérieuse, mais elle n’a pas encore atteint son état cible.
 
-Les points restant à renforcer incluent :
+Les limites visibles dans l’existant sont notamment :
 
-- la production et l’exploitation d’un **SBOM**
-- la signature des images
-- une politique de vérification côté cluster
-- un storytelling de confiance plus complet entre build, registre et déploiement
+- le flux GitOps déploie encore la demo-app via **tag** et non via **digest**
+- la policy `verifyImages` est encore en `Audit`
+- la policy `verifyImages` n’impose pas encore `verifyDigest`
+- l’immuabilité complète du déploiement n’est donc pas encore activée de bout en bout
 
-## Direction cible
+## Prochaine évolution la plus logique
 
-L’orientation prévue pour le lab est de faire évoluer la supply chain vers quelque chose de plus robuste en matière de sécurité :
+La prochaine amélioration la plus pertinente, sans complexifier inutilement la base actuelle, consiste à renforcer l’immuabilité du déploiement applicatif :
 
-- génération de SBOM
-- signature d’images
-- documentation plus claire de la chaîne de confiance
-- éventuelle intégration de contrôles d’admission liés à la provenance ou aux signatures
+- propagation du **digest** dans GitOps
+- alignement plus fort entre image signée, image vérifiée et image effectivement déployée
+- éventuelle évolution de `verifyDigest` lorsque la chaîne complète aura été revalidée
 
 ## Résumé
 
-La supply chain du lab est déjà sérieuse et cohérente.  
-La phase AWS prouve le chemin cloud complet, et la phase K3s prouve que la chaîne de delivery peut continuer à vivre hors AWS sans perdre sa logique GitOps.
+La supply chain applicative du lab comprend désormais :
+
+- build
+- scan bloquant
+- SARIF
+- SBOM
+- signature Cosign
+- vérification Cosign
+- déploiement GitOps sur K3s
+- vérification Kyverno côté cluster
+
+Le durcissement n’est donc plus un sujet à démarrer.  
+Il est déjà engagé et validé.  
+La suite logique consiste surtout à renforcer proprement l’immuabilité du flux existant.

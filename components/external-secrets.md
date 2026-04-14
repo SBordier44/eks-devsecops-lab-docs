@@ -9,7 +9,7 @@ Il explique :
 - son rôle pendant la phase AWS validée
 - son intégration avec AWS Secrets Manager
 - l’usage d’IRSA
-- pourquoi il est aujourd’hui documenté comme composant validé plutôt que comme composant actif du runtime K3s
+- sa place actuelle dans l’architecture globale du projet
 
 ## Rôle historique
 
@@ -23,11 +23,13 @@ Il faisait le lien entre :
 
 ## Pourquoi cette brique est importante
 
-Elle démontre un modèle de secrets beaucoup plus crédible que :
+Cette brique démontre un modèle de secrets beaucoup plus crédible que :
 
 - des secrets en clair dans Git
 - des manifests enrichis manuellement
 - des credentials AWS statiques dans les workloads
+
+Elle reste donc importante comme preuve de capacité validée sur la phase AWS.
 
 ## Déploiement dans la phase AWS
 
@@ -56,12 +58,19 @@ Cette partie n’était donc pas seulement installée : elle a réellement été
 
 ## Position actuelle
 
-External Secrets n’est pas encore réintroduit dans le runtime K3s actif.
+External Secrets n’est pas le composant de secrets actif sur le runtime K3s actuel.
 
-C’est volontaire.  
-La plateforme active a d’abord été reconstruite autour du minimum stable avant de choisir un nouveau standard de gestion des secrets.
+La phase K3s active s’appuie désormais sur **Sealed Secrets** pour le cas démontré de la demo-app.
+
+ESO reste donc documenté comme :
+
+- une brique **validée** de la phase AWS
+- une référence de conception utile
+- un composant non actif dans le runtime K3s courant
 
 ## Résumé
 
-External Secrets est un composant **validé et important** de la phase AWS.  
-La phase K3s attend encore son modèle actif de gestion des secrets.
+External Secrets est un composant **validé et important** de la phase AWS.
+
+La phase K3s active suit aujourd’hui une autre stratégie, plus simple, avec Sealed Secrets.  
+Cela ne retire rien à la valeur de la démonstration AWS déjà réalisée.

@@ -2,9 +2,10 @@
 
 ## Objectif
 
-Ce runbook documente les opérations de vérification autour d’External Secrets Operator dans la phase AWS validée du lab.
+Ce runbook documente les opérations de vérification autour d’**External Secrets Operator** dans la phase AWS validée du lab.
 
-Il reste utile comme référence, même si la phase active K3s n’utilise pas encore de stratégie de secrets équivalente.
+Il reste utile comme référence historique et opérationnelle pour la phase AWS.  
+Il ne correspond pas au modèle actif de gestion des secrets sur K3s, qui repose aujourd’hui sur **Sealed Secrets**.
 
 ## Vérifications de base
 
@@ -42,11 +43,13 @@ kubectl get secret -n <namespace>
 
 ## Points de diagnostic
 
-- état du `ClusterSecretStore`
-- statut de l’`ExternalSecret`
-- permissions IAM / IRSA
-- existence de la clé côté AWS Secrets Manager
-- logs de l’opérateur
+Les points prioritaires à vérifier sont :
+
+- l’état du `ClusterSecretStore`
+- le statut de l’`ExternalSecret`
+- les permissions IAM / IRSA
+- l’existence de la clé côté AWS Secrets Manager
+- les logs de l’opérateur
 
 ## Logs utiles
 
@@ -54,6 +57,17 @@ kubectl get secret -n <namespace>
 kubectl logs -n external-secrets deploy/external-secrets
 ```
 
+## Lecture correcte par phase
+
+Ce runbook concerne la **phase AWS validée**.
+
+Pour la phase K3s active :
+
+- ne pas chercher ici un diagnostic du modèle courant
+- se référer à la documentation de gestion des secrets K3s et au déploiement Sealed Secrets actif
+
 ## Résumé
 
-Ce runbook reste la référence opérationnelle de la phase AWS validée pour ESO.
+Ce runbook reste la référence opérationnelle de la phase AWS validée pour **External Secrets Operator**.
+
+La phase K3s active suit aujourd’hui une autre stratégie de secrets, plus simple et déjà en place.

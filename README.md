@@ -5,7 +5,7 @@ Ce dépôt contient la documentation d’architecture, les ADR et les runbooks d
 Le lab a été construit en deux phases complémentaires :
 
 - **Phase 1 validée sur AWS** : infrastructure provisionnée avec **Terraform** et **Terragrunt**, cluster **Amazon EKS**, registre **Amazon ECR**, authentification **GitHub OIDC**, gestion des secrets avec **External Secrets Operator**, **AWS Secrets Manager** et **IRSA**
-- **Phase 2 active sur VPS K3s** : continuation du lab sur un **VPS K3s** afin de poursuivre l’évolution de la plateforme avec **ArgoCD**, **Traefik**, **cert-manager**, **Let’s Encrypt**, **Kyverno** et la **demo-app** déployée en GitOps, sans conserver un coût AWS permanent
+- **Phase 2 active sur VPS K3s** : continuation du lab sur un **VPS K3s** afin de poursuivre l’évolution de la plateforme avec **ArgoCD**, **Traefik**, **cert-manager**, **Let’s Encrypt**, **Kyverno**, **Sealed Secrets** et la **demo-app** déployée en GitOps via **GHCR**
 
 L’objectif du projet est de démontrer une capacité réelle à **concevoir**, **déployer**, **opérer** et **faire évoluer** une plateforme Kubernetes de type production-like, avec une approche **DevSecOps**, **GitOps** et **platform engineering**, tout en gardant une trajectoire progressive et économiquement cohérente.
 
@@ -16,9 +16,9 @@ Le lab sert à démontrer des compétences concrètes sur :
 - la conception d’infrastructure cloud avec **Terraform** et **Terragrunt**
 - l’exploitation d’une plateforme Kubernetes avec **Amazon EKS** puis **K3s**
 - les déploiements déclaratifs avec **ArgoCD**
-- la chaîne de livraison de conteneurs avec **GitHub Actions**
+- la chaîne de livraison de conteneurs avec **GitHub Actions**, **GHCR**, **Trivy**, **SBOM**, **Cosign** et **Kyverno**
 - l’exposition sécurisée en HTTPS avec **Traefik**, **cert-manager** et **Let’s Encrypt**
-- la gestion des secrets avec **External Secrets Operator**, **AWS Secrets Manager** et **IRSA** dans la phase AWS
+- la gestion des secrets avec **External Secrets Operator**, **AWS Secrets Manager** et **IRSA** dans la phase AWS, puis avec **Sealed Secrets** dans la phase K3s active
 - la gouvernance et le durcissement progressif de workloads avec **Kyverno**
 - l’évolution d’une architecture sans repartir de zéro
 
@@ -30,7 +30,7 @@ Le lab est réparti en quatre dépôts :
   Provisionnement de l’infrastructure AWS avec Terraform et Terragrunt
 
 - **eks-devsecops-lab-app**  
-  Application de démonstration et pipeline CI/CD de build et publication d’image
+  Application de démonstration et pipeline CI/CD de build, contrôle de sécurité, signature et publication d’image
 
 - **eks-devsecops-lab-gitops**  
   Manifests Kubernetes, applications ArgoCD et overlays Kustomize
@@ -46,7 +46,7 @@ Cette documentation distingue volontairement trois niveaux :
 - **Capacités actives** : éléments actuellement utilisés sur la plateforme K3s
 - **Capacités planifiées** : éléments identifiés comme prochaines étapes du lab
 
-Cette séparation est importante pour rester transparent, crédible et professionnel.
+Cette séparation est importante pour rester transparente, crédible et professionnelle.
 
 ## Phase 1 validée : plateforme cloud AWS
 
@@ -74,20 +74,27 @@ La phase active du lab comprend désormais :
 - réconciliation GitOps active depuis le dépôt GitOps
 - **Traefik** pour l’ingress
 - **cert-manager** avec certificats Let’s Encrypt en production
-- **Kyverno** et policies initiales déjà en place
-- déploiement GitOps de la **demo-app** sur un overlay `k3s-dev`
+- **Sealed Secrets** déployé via ArgoCD
+- **Kyverno** avec un socle mixte de policies `Enforce` et `Audit`
+- déploiement GitOps de la **demo-app** sur l’overlay `k3s-dev`
 - exposition publique de l’application avec TLS valide
-- sortie du runtime applicatif hors AWS
 - registre d’images cible de la phase 2 : **GHCR**
+- pipeline CI/CD incluant :
+  - scan Trivy bloquant
+  - upload SARIF vers GitHub Security
+  - génération de SBOM
+  - signature Cosign
+  - vérification Cosign
+  - policy Kyverno `verifyImages` côté cluster
 
 ## Capacités planifiées
 
 Les prochaines étapes du lab incluent notamment :
 
-- définir une stratégie de gestion des secrets compatible K3s pour la phase active
-- élargir progressivement la couverture Kyverno
-- faire évoluer certaines règles de `Audit` vers `Enforce` lorsque cela sera justifié
-- renforcer la supply chain du conteneur
+- élargir progressivement la couverture Kyverno au-delà de la demo-app
+- faire évoluer certaines règles encore en `Audit` lorsque cela sera justifié
+- renforcer l’immuabilité du déploiement applicatif par digest dans le flux GitOps
+- enrichir la documentation et la gouvernance de la gestion des secrets sur K3s
 - ajouter d’autres contrôles de sécurité plateforme
 - enrichir l’observabilité et les runbooks
 
@@ -158,7 +165,8 @@ Ce dépôt s’adresse à :
 
 ## Statut
 
-Le lab évolue de manière itérative.  
+Le lab évolue de manière itérative.
+
 La documentation a vocation à refléter :
 
 - l’état réellement validé

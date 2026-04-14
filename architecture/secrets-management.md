@@ -7,8 +7,9 @@ Ce document explique comment les secrets sont gérés dans le lab.
 Il couvre :
 
 - le modèle validé dans la phase AWS
-- la position actuelle sur le runtime K3s
-- ce qui est déjà démontré et ce qui reste à définir
+- le modèle actif dans la phase K3s
+- ce que le lab démontre déjà
+- ce qui reste encore à enrichir
 
 ## Pourquoi cette partie compte
 
@@ -18,7 +19,7 @@ Une plateforme réaliste doit éviter :
 - de gérer des valeurs sensibles manuellement dans Kubernetes
 - de distribuer des credentials longs termes dans les manifests
 
-Le lab garde cette exigence, même si le runtime a évolué.
+Le lab garde cette exigence, même si le runtime a évolué entre la phase AWS et la phase K3s.
 
 ## Modèle AWS validé
 
@@ -33,69 +34,75 @@ La phase AWS validée utilisait le flux suivant :
 
 Ce modèle a été réellement implémenté et validé.
 
-## Composants historiques de la phase AWS
+## Modèle K3s actif
 
-Le socle validé comprenait :
+La phase K3s active utilise désormais un modèle différent, plus simple et plus léger :
 
-- les CRDs External Secrets
-- le contrôleur External Secrets Operator
-- un `ClusterSecretStore` AWS
-- un `ExternalSecret` dans l’overlay applicatif
-- un rôle IAM dédié via IRSA
-- la synchronisation effective entre AWS Secrets Manager et Kubernetes
+1. **Sealed Secrets** est déployé via ArgoCD
+2. la demo-app versionne un `SealedSecret` dans l’overlay `k3s-dev`
+3. le contrôleur génère un `Secret` Kubernetes à partir de ce manifeste scellé
+4. le workload consomme ce `Secret` via `secretKeyRef`
 
-## Position actuelle sur K3s
+Pour la demo-app, ce flux est déjà actif avec :
 
-Le runtime actif **K3s** ne réutilise pas actuellement le modèle AWS de gestion des secrets.
+- un `SealedSecret` nommé `demo-app-config`
+- une clé `DEMO_MESSAGE`
+- un patch de déploiement qui injecte cette valeur dans le conteneur
 
-C’est un choix volontaire.
+## Lecture correcte des deux phases
 
-La migration vers K3s a d’abord reconstruit le minimum stable :
+Le lab ne doit pas être lu comme un projet ayant abandonné la gestion propre des secrets après la phase AWS.
 
-- K3s
-- ArgoCD
-- Traefik
-- cert-manager
-- Kyverno
-- demo-app
+Il démontre désormais deux approches différentes :
 
-La gestion des secrets côté K3s n’a pas encore été réintroduite à ce stade.
+- une approche **AWS-native** et externalisée pendant la phase AWS validée
+- une approche **GitOps-compatible** et plus simple avec **Sealed Secrets** dans la phase K3s active
 
-## Pourquoi c’est acceptable
+Ces deux modèles répondent à des contraintes différentes et sont documentés comme tels.
 
-Cette approche reste saine pour plusieurs raisons :
+## Pourquoi le modèle K3s actuel est cohérent
 
-- les dépendances AWS-specific n’ont pas été copiées aveuglément
-- la base de plateforme a été stabilisée avant d’ajouter une nouvelle brique sensible
-- l’écart est explicite et documenté, pas caché
+Le modèle K3s actuel reste sain pour plusieurs raisons :
 
-## Ce que le lab démontre déjà malgré tout
+- il évite de stocker le secret en clair dans Git
+- il reste simple à comprendre et à opérer
+- il s’intègre naturellement au flux GitOps
+- il suffit au périmètre actuel du lab
 
-Même dans cet état transitoire, le lab démontre :
+Le but n’est pas encore de démontrer un backend externe complexe pour K3s, mais de garder une base stable et propre.
 
-- un vrai modèle externalisé de gestion de secrets dans la phase AWS
-- une séparation claire entre phase validée et phase active
-- une migration de runtime disciplinée
-- une capacité à documenter précisément ce qui reste à faire
+## Forces actuelles
+
+La gestion des secrets du lab démontre désormais :
+
+- un vrai modèle externalisé pendant la phase AWS
+- un vrai modèle actif sur K3s
+- une séparation claire entre secret source, manifeste GitOps et consommation applicative
+- une capacité à adapter le modèle de secrets au runtime sans casser la base du projet
 
 ## Contraintes actuelles
 
-La phase active K3s a pour limites actuelles :
+Le modèle K3s actif reste volontairement limité :
 
-- pas de synchronisation de secrets active encore en place
-- pas encore de backend de secrets retenu comme standard K3s
-- pas encore d’exemple applicatif actif consommant des secrets côté K3s
+- le périmètre démontré concerne surtout la demo-app
+- le modèle repose sur un secret scellé dans Git, pas sur un backend externe
+- la rotation et les procédures de cycle de vie ne sont pas encore détaillées
+- la gouvernance autour de l’usage des secrets reste encore légère
 
 ## Évolution prévue
 
-La suite logique consiste à introduire une stratégie de secrets compatible K3s qui reste :
+Les prochaines améliorations possibles sur cette brique sont :
 
-- simple
-- compréhensible
-- compatible avec GitOps
-- cohérente avec la taille actuelle du lab
+- enrichir la documentation opérationnelle autour de Sealed Secrets
+- documenter plus finement les procédures de rotation et de renouvellement
+- décider plus tard si un backend externe devient utile sur K3s
+- garder la solution actuelle tant qu’elle reste adaptée à la taille du lab
 
 ## Résumé
 
-La gestion des secrets est déjà une capacité **validée** du lab grâce à la phase AWS.  
-Ce qui reste ouvert n’est pas la capacité à faire proprement, mais le choix du modèle qui deviendra le standard actif de la phase K3s.
+La gestion des secrets est déjà une capacité démontrée du lab.
+
+- **AWS validé** : External Secrets + AWS Secrets Manager + IRSA
+- **K3s actif** : Sealed Secrets + Secret Kubernetes consommé par la demo-app
+
+Le sujet n’est donc plus l’absence de stratégie de secrets sur K3s, mais la consolidation et l’enrichissement progressif du modèle déjà en place.
